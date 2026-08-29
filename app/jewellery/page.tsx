@@ -6,7 +6,6 @@ import JewelleryListing from "@/components/shop/jewellery-listing";
 export default function JewelleryPage() {
   return (
 <>
-<Header />
       <JewelleryListing />
 <FinalCTA />
 </>

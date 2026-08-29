@@ -27,7 +27,6 @@ export default async function JewelleryDetailsPage({
 
   return (
     <>
-    <Header />
     <JewelleryDetails
       product={product}
       

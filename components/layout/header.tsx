@@ -18,6 +18,8 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useCart } from "@/components/shop/cart-provider";
+
 const GOLD = "var(--wazni-gold)";
 
 const categories = [
@@ -39,6 +41,7 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   const reduceMotion = useReducedMotion();
+  const { totalQuantity } = useCart();
   const duration = reduceMotion ? 0 : 0.32;
 
   useEffect(() => {
@@ -159,7 +162,8 @@ export default function Header() {
             <HeaderAction
               icon={<ShoppingBag />}
               label="Bag"
-              badge="0"
+              badge={totalQuantity.toString()}
+              href="/bag"
             />
           </div>
         </div>
@@ -227,22 +231,28 @@ export default function Header() {
               />
             </motion.button>
 
-            <motion.button
+            <motion.div
               whileTap={{ scale: 0.9 }}
-              type="button"
               aria-label="Shopping bag"
               className="relative"
             >
-              <ShoppingBag
-                size={27}
-                strokeWidth={1.5}
-                color={GOLD}
-              />
+              <Link href="/bag" className="block" aria-label={`Shopping bag with ${totalQuantity} items`}>
+                <ShoppingBag
+                  size={27}
+                  strokeWidth={1.5}
+                  color={GOLD}
+                />
 
-              <span className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wazni-gold)] px-1 text-[10px] font-medium text-[var(--wazni-navy)]">
-                0
-              </span>
-            </motion.button>
+                <motion.span
+                  key={totalQuantity}
+                  initial={reduceMotion ? false : { scale: 0.65, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wazni-gold)] px-1 text-[10px] font-medium text-[var(--wazni-navy)]"
+                >
+                  {totalQuantity > 99 ? "99+" : totalQuantity}
+                </motion.span>
+              </Link>
+            </motion.div>
           </div>
         </div>
 
@@ -465,32 +475,48 @@ function HeaderAction({
   icon,
   label,
   badge,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
   badge?: string;
+  href?: string;
 }) {
-  return (
-    <motion.button
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.95 }}
-      type="button"
-      className="flex min-w-[54px] flex-col items-center gap-2"
-    >
+  const content = (
+    <>
       <span className="relative [&>svg]:h-7 [&>svg]:w-7 [&>svg]:stroke-[1.4] [&>svg]:text-[var(--wazni-gold)]">
         {icon}
 
-        {badge && (
-          <span className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wazni-gold)] px-1 text-[9px] font-medium text-[var(--wazni-navy)]">
-            {badge}
-          </span>
+        {badge !== undefined && (
+          <motion.span
+            key={badge}
+            initial={{ scale: 0.65, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute -right-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--wazni-gold)] px-1 text-[9px] font-medium text-[var(--wazni-navy)]"
+          >
+            {Number(badge) > 99 ? "99+" : badge}
+          </motion.span>
         )}
       </span>
 
-      <span className="text-[11px] text-white">
-        {label}
-      </span>
-    </motion.button>
+      <span className="text-[11px] text-white">{label}</span>
+    </>
+  );
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.95 }}
+      className="flex min-w-[54px] flex-col items-center gap-2"
+    >
+      {href ? (
+        <Link href={href} aria-label={`${label}, ${badge ?? 0} items`} className="flex flex-col items-center gap-2">
+          {content}
+        </Link>
+      ) : (
+        <button type="button" className="flex flex-col items-center gap-2">{content}</button>
+      )}
+    </motion.div>
   );
 }
 

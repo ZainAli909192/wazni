@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Footer from "@/components/layout/footer";
+import { CartProvider } from "@/components/shop/cart-provider";
 import "./globals.css";
+import Header from "@/components/layout/header";
 
 export const metadata: Metadata = {
   title: "Wazni Jewellery",
@@ -15,11 +17,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen">
-          {children}
-        </div>
+        
+        <CartProvider>
+        <Header />
+          <div className="min-h-screen">
+            {children}
+          </div>
 
-        <Footer />
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );

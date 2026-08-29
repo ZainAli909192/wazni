@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   AnimatePresence,
@@ -21,7 +22,9 @@ import {
 
 import {
   useId,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -30,6 +33,7 @@ import {
   products,
   type Product,
 } from "@/lib/shop-data";
+import { useCart } from "@/components/shop/cart-provider";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -49,6 +53,9 @@ type Props = {
 export default function JewelleryDetails({
   product,
 }: Props) {
+  const router = useRouter();
+  const { addItem } = useCart();
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeImage, setActiveImage] =
     useState(0);
 
@@ -57,21 +64,82 @@ export default function JewelleryDetails({
 
   const [openSection, setOpenSection] =
     useState<string | null>("delivery");
+  const [addedToBag, setAddedToBag] =
+    useState(false);
+
+  useEffect(
+    () => () => {
+      if (addedTimer.current) clearTimeout(addedTimer.current);
+    },
+    []
+  );
+
+  const handleAddToBag = () => {
+    addItem(product.id, quantity);
+    setAddedToBag(true);
+
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setAddedToBag(false), 1800);
+  };
+
+  const handleBuyNow = () => {
+    addItem(product.id, quantity);
+    router.push("/bag");
+  };
 
   /*
-   * Use gallery images when available.
-   * Otherwise automatically use the main listing image.
+   * Prefer genuine gallery images. Until those are connected,
+   * complete the three-image viewer with catalogue imagery.
    */
   const gallery = useMemo(() => {
-    if (
+    const suppliedImages =
       product.images &&
       product.images.length > 0
-    ) {
-      return product.images.slice(0, 4);
-    }
+        ? product.images
+        : [product.image];
 
-    return [product.image];
-  }, [product.image, product.images]);
+    const sameType = products.filter(
+      (item) =>
+        item.slug !== product.slug &&
+        item.productType ===
+          product.productType
+    );
+
+    const remaining = products.filter(
+      (item) =>
+        item.slug !== product.slug &&
+        item.productType !==
+          product.productType
+    );
+
+    const additionalImages = [
+      ...sameType,
+      ...remaining,
+    ]
+      .map((item) => item.image)
+      .filter(
+        (image, index, images) =>
+          !suppliedImages.includes(image) &&
+          images.indexOf(image) === index
+      )
+      .slice(
+        0,
+        Math.max(
+          0,
+          3 - suppliedImages.length
+        )
+      );
+
+    return [
+      ...suppliedImages,
+      ...additionalImages,
+    ].slice(0, 3);
+  }, [
+    product.image,
+    product.images,
+    product.productType,
+    product.slug,
+  ]);
 
   const formattedPrice =
     product.price.toLocaleString("en-AE");
@@ -232,7 +300,7 @@ export default function JewelleryDetails({
             {/* Thumbnails */}
 
             {gallery.length > 1 && (
-              <div className="mt-3 grid grid-cols-4 gap-2 sm:mt-4 sm:gap-3">
+              <div className="mt-3 grid max-w-[540px] grid-cols-3 gap-2 sm:mt-4 sm:gap-3">
                 {gallery.map(
                   (image, index) => (
                     <button
@@ -244,9 +312,9 @@ export default function JewelleryDetails({
                       aria-label={`View product image ${
                         index + 1
                       }`}
-                      className={`relative aspect-square overflow-hidden border transition-all duration-300 ${
+                      className={`relative aspect-square cursor-pointer overflow-hidden border bg-[#F9F7F3] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 ${
                         activeImage === index
-                          ? "border-[#B88734]"
+                          ? "border-[#B88734] shadow-[0_0_0_1px_#B88734]"
                           : "border-[#071426]/10 hover:border-[#B88734]/60"
                       }`}
                     >
@@ -374,6 +442,7 @@ export default function JewelleryDetails({
             <div className="space-y-3 py-7">
               <button
                 type="button"
+                onClick={handleAddToBag}
                 className="
                   group flex min-h-[56px] w-full
                   items-center justify-center gap-3
@@ -392,11 +461,14 @@ export default function JewelleryDetails({
                   strokeWidth={1.5}
                 />
 
-                Add To Bag
+                <span aria-live="polite">
+                  {addedToBag ? "Added To Bag" : "Add To Bag"}
+                </span>
               </button>
 
               <button
                 type="button"
+                onClick={handleBuyNow}
                 className="
                   flex min-h-[56px] w-full
                   items-center justify-center
