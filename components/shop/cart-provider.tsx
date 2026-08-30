@@ -10,13 +10,11 @@ import {
   type ReactNode,
 } from "react";
 
-import { products } from "@/lib/shop-data";
-
 const CART_STORAGE_KEY = "wazni-cart-v1";
 const MAX_QUANTITY = 99;
 
 export type CartLine = {
-  productId: number;
+  productId: string | number;
   quantity: number;
 };
 
@@ -24,9 +22,9 @@ type CartContextValue = {
   items: CartLine[];
   totalQuantity: number;
   hydrated: boolean;
-  addItem: (productId: number, quantity?: number) => void;
-  setQuantity: (productId: number, quantity: number) => void;
-  removeItem: (productId: number) => void;
+  addItem: (productId: string | number, quantity?: number) => void;
+  setQuantity: (productId: string | number, quantity: number) => void;
+  removeItem: (productId: string | number) => void;
   clearCart: () => void;
 };
 
@@ -35,16 +33,15 @@ const CartContext = createContext<CartContextValue | null>(null);
 function normalizeCart(value: unknown): CartLine[] {
   if (!Array.isArray(value)) return [];
 
-  const validProductIds = new Set(products.map((product) => product.id));
-  const merged = new Map<number, number>();
+  const merged = new Map<string | number, number>();
 
   for (const line of value) {
     if (!line || typeof line !== "object") continue;
 
-    const productId = Number((line as CartLine).productId);
+    const productId = (line as CartLine).productId;
     const quantity = Number((line as CartLine).quantity);
 
-    if (!Number.isInteger(productId) || !validProductIds.has(productId)) continue;
+    if ((typeof productId !== "string" && typeof productId !== "number") || String(productId).trim() === "") continue;
     if (!Number.isFinite(quantity) || quantity <= 0) continue;
 
     const nextQuantity = Math.min(
@@ -97,9 +94,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrated, items]);
 
-  const addItem = useCallback((productId: number, quantity = 1) => {
-    if (!products.some((product) => product.id === productId)) return;
-
+  const addItem = useCallback((productId: string | number, quantity = 1) => {
     const amount = Math.max(1, Math.floor(quantity));
     setItems((current) => {
       const existing = current.find((line) => line.productId === productId);
@@ -116,7 +111,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setQuantity = useCallback((productId: number, quantity: number) => {
+  const setQuantity = useCallback((productId: string | number, quantity: number) => {
     if (quantity <= 0) {
       setItems((current) => current.filter((line) => line.productId !== productId));
       return;
@@ -131,7 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const removeItem = useCallback((productId: number) => {
+  const removeItem = useCallback((productId: string | number) => {
     setItems((current) => current.filter((line) => line.productId !== productId));
   }, []);
 

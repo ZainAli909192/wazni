@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-import { products } from "@/lib/shop-data";
+import { getStorefrontCatalog } from "@/lib/storefront/catalog";
 
 type Props = {
   searchParams: Promise<{
@@ -22,6 +22,7 @@ export default async function SearchPage({
 }: Props) {
   const params =
     await searchParams;
+  const { products, categories } = await getStorefrontCatalog();
 
   const query =
     params.q?.trim() ?? "";
@@ -33,9 +34,9 @@ export default async function SearchPage({
     normalizedQuery
       ? products
           .filter((product) => {
-            if (normalizedQuery === "jewellery") {
-              return true;
-            }
+            const selectedCategory = categories.find((category) => normalize(category.slug) === normalizedQuery || normalize(category.name) === normalizedQuery);
+            if (selectedCategory?.slug === "jewellery") return true;
+            if (selectedCategory?.children.some((child) => normalize(child.slug) === normalizedQuery || normalize(child.name) === normalizedQuery)) return normalize(product.productType) === normalize(selectedCategory.children.find((child) => normalize(child.slug) === normalizedQuery || normalize(child.name) === normalizedQuery)?.name ?? "");
 
             if (normalizedQuery === "collections") {
               return product.featured === true;

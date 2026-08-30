@@ -31,52 +31,15 @@ import {
 } from "@/components/layout/footer";
 import { useStore } from "@/components/providers/store-provider";
 import { useCart } from "@/components/shop/cart-provider";
+import { getPublicCatalog } from "@/lib/storefront/client";
+import type { StorefrontCategory } from "@/lib/storefront/types";
 
 const GOLD = "var(--wazni-gold)";
 
 const STORE_MAP_URL =
   "https://www.google.com/maps/search/?api=1&query=Wazni%20Jewellery%2C%20Al%20Maqta%27%20St%20-%20Rabdan%20-%20RB2%20-%20Abu%20Dhabi";
 
-const categories = [
-  {
-    label: "Jewellery",
-    icon: GemIcon,
-    href: "/search?q=jewellery",
-  },
-  {
-    label: "Collections",
-    icon: RingIcon,
-    href: "/search?q=collections",
-  },
-  {
-    label: "Diamonds",
-    icon: GemIcon,
-    href: "/search?q=diamonds",
-  },
-  {
-    label: "Gold",
-    icon: GoldIcon,
-    href: "/search?q=gold",
-  },
-];
-
 const menuItems = [
-  {
-    label: "Jewellery",
-    href: "/search?q=jewellery",
-  },
-  {
-    label: "Collections",
-    href: "/search?q=collections",
-  },
-  {
-    label: "Diamonds",
-    href: "/search?q=diamonds",
-  },
-  {
-    label: "Gold",
-    href: "/search?q=gold",
-  },
   {
     label: "Gifts",
     href: "/gifts",
@@ -92,6 +55,7 @@ const menuItems = [
 ];
 
 export default function Header() {
+  const [categories, setCategories] = useState<StorefrontCategory[]>([]);
   const [menuOpen, setMenuOpen] =
     useState(false);
 
@@ -128,6 +92,8 @@ export default function Header() {
     0.36,
     1,
   ] as const;
+
+  useEffect(() => { let active = true; getPublicCatalog().then((catalog) => active && setCategories(catalog.categories)).catch(() => undefined); return () => { active = false; }; }, []);
 
   const fromTop = {
     hidden: {
@@ -427,13 +393,9 @@ export default function Header() {
           animate="visible"
           className="flex h-[68px] items-center gap-14 bg-[var(--wazni-ivory)] px-10 text-[13px] font-medium uppercase text-[var(--wazni-navy)] xl:gap-16 xl:px-12"
         >
-          {categories.map(
-            ({
-              label,
-              href,
-            }) => (
+          {categories.map((category) => (
               <motion.div
-                key={label}
+                key={category.id}
                 variants={fromBottom}
                 whileHover={{
                   y: -2,
@@ -441,13 +403,15 @@ export default function Header() {
                 whileTap={{
                   scale: 0.96,
                 }}
+                className="group relative flex h-full items-center"
               >
                 <Link
-                  href={href}
+                  href={`/search?q=${encodeURIComponent(category.slug)}`}
                   className="!text-[var(--wazni-navy)] !no-underline transition-colors hover:!text-[var(--wazni-gold-dark)]"
                 >
-                  {label}
+                  {category.name}
                 </Link>
+                {category.children.length > 0 && <div className="invisible absolute left-0 top-full z-[110] min-w-[220px] translate-y-2 border border-[#071426]/10 bg-white py-2 opacity-0 shadow-[0_14px_35px_rgba(7,20,38,0.13)] transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">{category.children.map((child) => <Link key={child.id} href={`/search?q=${encodeURIComponent(child.slug)}`} className="block px-5 py-3 !text-[12px] !text-[var(--wazni-navy)] !no-underline hover:bg-[#FAF7F1] hover:!text-[var(--wazni-gold-dark)]">{child.name}</Link>)}</div>}
               </motion.div>
             )
           )}
@@ -595,14 +559,11 @@ export default function Header() {
           animate="visible"
           className="grid h-[88px] grid-cols-4 bg-[var(--wazni-ivory)] text-[var(--wazni-navy)] sm:h-[96px]"
         >
-          {categories.map(
-            ({
-              label,
-              icon: Icon,
-              href,
-            }) => (
+          {categories.slice(0, 4).map((category) => {
+              const Icon = category.slug === "collections" ? RingIcon : category.slug === "gold" ? GoldIcon : GemIcon;
+              return (
               <motion.div
-                key={label}
+                key={category.id}
                 variants={{
                   hidden: {
                     opacity: 0,
@@ -629,17 +590,17 @@ export default function Header() {
                 }}
               >
                 <Link
-                  href={href}
+                  href={`/search?q=${encodeURIComponent(category.slug)}`}
                   className="flex h-[88px] min-w-0 flex-col items-center justify-center gap-2 border-r border-[var(--wazni-gold)]/25 px-1 !text-[var(--wazni-navy)] !no-underline last:border-r-0 sm:h-[96px]"
                 >
                   <Icon className="h-6 w-8 shrink-0 text-[var(--wazni-gold-dark)] sm:h-7 sm:w-9" />
 
                   <span className="max-w-full whitespace-nowrap text-center text-[9px] font-medium uppercase tracking-[-0.01em] sm:text-[11px] sm:tracking-normal">
-                    {label}
+                    {category.name}
                   </span>
                 </Link>
               </motion.div>
-            )
+            )}
           )}
         </motion.nav>
       </div>
@@ -711,6 +672,7 @@ export default function Header() {
               </div>
 
               <nav className="overflow-y-auto px-5 py-4">
+                {categories.map((category) => <div key={category.id}><Link href={`/search?q=${encodeURIComponent(category.slug)}`} onClick={() => setMenuOpen(false)} className="block border-b border-white/10 py-4 !text-[16px] !text-white !no-underline transition-colors hover:!text-[var(--wazni-gold)]">{category.name}</Link>{category.children.map((child) => <Link key={child.id} href={`/search?q=${encodeURIComponent(child.slug)}`} onClick={() => setMenuOpen(false)} className="block border-b border-white/10 py-3 pl-5 !text-[13px] !text-white/75 !no-underline hover:!text-[var(--wazni-gold)]">{child.name}</Link>)}</div>)}
                 {menuItems.map(
                   (
                     item,

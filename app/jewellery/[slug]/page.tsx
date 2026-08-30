@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
 
 import JewelleryDetails from "@/components/shop/jewellery-details";
-import { products } from "@/lib/shop-data";
-import Header from "@/components/layout/header";
+import { getStorefrontCatalog, getStorefrontProduct } from "@/lib/storefront/catalog";
 import FinalCTA from "@/components/home/final-cta";
-import Footer from "@/components/layout/footer";
 
 type Props = {
   params: Promise<{
@@ -17,9 +15,7 @@ export default async function JewelleryDetailsPage({
 }: Props) {
   const { slug } = await params;
 
-  const product = products.find(
-    (item) => item.slug === slug
-  );
+  const [product, catalog] = await Promise.all([getStorefrontProduct(slug), getStorefrontCatalog()]);
 
   if (!product) {
     notFound();
@@ -29,7 +25,7 @@ export default async function JewelleryDetailsPage({
     <>
     <JewelleryDetails
       product={product}
-      
+      catalogProducts={catalog.products}
       />
       <FinalCTA />
 

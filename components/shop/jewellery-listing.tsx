@@ -26,12 +26,9 @@ import {
 import {
   materials,
   priceRanges,
-  products,
-  productTypes,
   sortOptions,
-  type Material,
-  type ProductType,
 } from "@/lib/shop-data";
+import type { StorefrontProduct } from "@/lib/storefront/types";
 
 type OpenDesktopFilter =
   | "productType"
@@ -53,12 +50,12 @@ type SelectedPrice = {
   max: number;
 } | null;
 
-export default function JewelleryListing() {
+export default function JewelleryListing({ products, productTypes }: { products: StorefrontProduct[]; productTypes: string[] }) {
   const [selectedProductTypes, setSelectedProductTypes] =
-    useState<ProductType[]>([]);
+    useState<string[]>([]);
 
   const [selectedMaterials, setSelectedMaterials] =
-    useState<Material[]>([]);
+    useState<string[]>([]);
 
   const [selectedPrice, setSelectedPrice] =
     useState<SelectedPrice>(null);
@@ -79,7 +76,7 @@ export default function JewelleryListing() {
     useState<MobileSection>(null);
 
   const [wishlist, setWishlist] =
-    useState<number[]>([]);
+    useState<string[]>([]);
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -143,6 +140,7 @@ export default function JewelleryListing() {
 
     return result;
   }, [
+    products,
     selectedProductTypes,
     selectedMaterials,
     selectedPrice,
@@ -160,7 +158,7 @@ export default function JewelleryListing() {
     )?.label ?? "Featured";
 
   function toggleProductType(
-    value: ProductType
+    value: string
   ) {
     setSelectedProductTypes((current) =>
       current.includes(value)
@@ -172,7 +170,7 @@ export default function JewelleryListing() {
   }
 
   function toggleMaterial(
-    value: Material
+    value: string
   ) {
     setSelectedMaterials((current) =>
       current.includes(value)
@@ -183,7 +181,7 @@ export default function JewelleryListing() {
     );
   }
 
-  function toggleWishlist(id: number) {
+  function toggleWishlist(id: string) {
     setWishlist((current) =>
       current.includes(id)
         ? current.filter(
@@ -760,7 +758,7 @@ function ProductCard({
   wished,
   onWishlist,
 }: {
-  product: (typeof products)[number];
+  product: StorefrontProduct;
   wished: boolean;
   onWishlist: () => void;
 }) {

@@ -12,7 +12,8 @@ import {
   useState,
 } from "react";
 
-import { products } from "@/lib/shop-data";
+import { getPublicCatalog } from "@/lib/storefront/client";
+import type { StorefrontProduct } from "@/lib/storefront/types";
 
 type HeaderSearchProps = {
   mobile?: boolean;
@@ -40,6 +41,7 @@ export default function HeaderSearch({
 
   const [focused, setFocused] =
     useState(false);
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
 
   const cleanQuery =
     normalize(query);
@@ -78,7 +80,7 @@ export default function HeaderSearch({
           ) === index
       )
       .slice(0, 6);
-  }, [cleanQuery]);
+  }, [cleanQuery, products]);
 
   const showDropdown =
     focused &&
@@ -110,6 +112,8 @@ export default function HeaderSearch({
       );
     };
   }, []);
+
+  useEffect(() => { let active = true; getPublicCatalog().then((catalog) => active && setProducts(catalog.products)).catch(() => undefined); return () => { active = false; }; }, []);
 
   function handleSubmit(
     event: FormEvent<HTMLFormElement>

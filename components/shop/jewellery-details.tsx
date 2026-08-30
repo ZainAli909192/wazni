@@ -25,14 +25,11 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  products,
-  type Product,
-} from "@/lib/shop-data";
+import type { StorefrontProduct } from "@/lib/storefront/types";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-type ProductDetailsData = Product & {
+type ProductDetailsData = StorefrontProduct & {
   images?: string[];
   description?: string;
   details?: Array<{
@@ -43,10 +40,12 @@ type ProductDetailsData = Product & {
 
 type Props = {
   product: ProductDetailsData;
+  catalogProducts: StorefrontProduct[];
 };
 
 export default function JewelleryDetails({
   product,
+  catalogProducts,
 }: Props) {
   const [activeImage, setActiveImage] =
     useState(0);
@@ -63,14 +62,14 @@ export default function JewelleryDetails({
         ? product.images
         : [product.image];
 
-    const sameType = products.filter(
+    const sameType = catalogProducts.filter(
       (item) =>
         item.slug !== product.slug &&
         item.productType ===
         product.productType
     );
 
-    const remaining = products.filter(
+    const remaining = catalogProducts.filter(
       (item) =>
         item.slug !== product.slug &&
         item.productType !==
@@ -104,6 +103,7 @@ export default function JewelleryDetails({
     product.images,
     product.productType,
     product.slug,
+    catalogProducts,
   ]);
 
   const formattedPrice =
@@ -456,6 +456,7 @@ export default function JewelleryDetails({
 
       <RelatedProducts
         currentProduct={product}
+        catalogProducts={catalogProducts}
       />
     </main>
   );
@@ -710,15 +711,17 @@ function ProductAccordion({
 
 function RelatedProducts({
   currentProduct,
+  catalogProducts,
 }: {
-  currentProduct: Product;
+  currentProduct: StorefrontProduct;
+  catalogProducts: StorefrontProduct[];
 }) {
   /*
    * Prioritize products of the same type.
    * Then fill remaining cards with other jewellery.
    */
   const related = useMemo(() => {
-    const sameType = products.filter(
+    const sameType = catalogProducts.filter(
       (item) =>
         item.id !== currentProduct.id &&
         item.productType ===
@@ -726,7 +729,7 @@ function RelatedProducts({
     );
 
     const otherProducts =
-      products.filter(
+      catalogProducts.filter(
         (item) =>
           item.id !== currentProduct.id &&
           item.productType !==
@@ -737,7 +740,7 @@ function RelatedProducts({
       ...sameType,
       ...otherProducts,
     ].slice(0, 4);
-  }, [currentProduct]);
+  }, [catalogProducts, currentProduct]);
 
   if (!related.length) {
     return null;

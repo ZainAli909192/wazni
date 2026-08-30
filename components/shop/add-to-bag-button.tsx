@@ -39,7 +39,7 @@ export default function AddToBagButton({
     useState(false);
 
   function handleAdd() {
-    addItem(Number(product.id), quantity);
+    addItem(product.id, quantity);
 
     setAdded(true);
 
@@ -69,7 +69,7 @@ export default function AddToBagButton({
       <button
         type="button"
         onClick={() => {
-          addItem(Number(product.id), quantity);
+          addItem(product.id, quantity);
 
           router.push("/checkout");
         }}
