@@ -76,13 +76,13 @@ a {
      BRAND COLORS
      --------------------------------------------------------- */
 
-  --color-black: #000000;
+  --color-black: #0b1728;
   --color-white: #ffffff;
 
   /* Royal Chins Lavender */
-  --color-lavender: #6f3cc3;
-  --color-lavender-hover: #5f2faf;
-  --color-lavender-active: #51269a;
+  --color-lavender: #c6a15b;
+  --color-lavender-hover: #c6a15b;
+  --color-lavender-active: #c6a15b;
 
   /* Light lavender backgrounds */
   --color-lavender-50: #f7f3fc;
@@ -96,9 +96,9 @@ a {
   --background: #ffffff;
   --foreground: #000000;
 
-  --primary: #6f3cc3;
-  --primary-hover: #5f2faf;
-  --primary-active: #51269a;
+  --primary: #c6a15b;
+  --primary-hover: #c6a15b;
+  --primary-active: #c6a15b;
   --primary-foreground: #ffffff;
 
   --secondary: #000000;
@@ -121,7 +121,7 @@ a {
   --input-border: #d9d9d9;
   --input-placeholder: #8a8a8a;
 
-  --input-focus: #6f3cc3;
+  --input-focus: #c6a15b;
   --focus-ring: rgba(111, 60, 195, 0.15);
 
   /* ---------------------------------------------------------
@@ -139,7 +139,7 @@ a {
   --warning: #b45309;
   --warning-background: #fffbeb;
 
-  --info: #2563eb;
+  --info: #0b1728;
   --info-background: #eff6ff;
 
   /* ---------------------------------------------------------

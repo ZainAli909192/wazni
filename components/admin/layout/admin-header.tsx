@@ -34,12 +34,12 @@ export function AdminHeader() {
             alt="Wazni Jewellery"
             width={120}
             height={60}
-            priority
+            priority 
             className="h-[54px] w-[105px] object-contain lg:hidden"
           />
 
           <div className="hidden lg:block">
-            <p className="text-base font-semibold text-foreground">
+            <p className="text-base font-semibold text-muted-foreground">  
               Wazni Jewellery Admin
             </p>
 
@@ -109,14 +109,6 @@ export function AdminHeader() {
                     Profile
                   </Link>
 
-                  <Link
-                    href="/admin/change-password"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-surface-subtle"
-                  >
-                    <KeyRound className="h-4 w-4 text-primary" />
-                    Change Password
-                  </Link>
 
                
 

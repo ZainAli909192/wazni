@@ -2,6 +2,7 @@
 
 import {
   ChangeEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -19,6 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/forms/password-input";
 import { FormAlert } from "@/components/forms/form-alert";
+import {
+  adminChangePassword,
+  getAdminProfile,
+  updateAdminProfile,
+} from "@/lib/api/auth";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 type ProfileForm = {
   fullName: string;
@@ -41,10 +48,10 @@ type FormErrors = {
 };
 
 const initialProfile: ProfileForm = {
-  fullName: "Royal Chins Admin",
-  email: "admin@royalchins.ae",
-  phone: "+971 50 000 0000",
-  role: "Owner / Admin",
+  fullName: "",
+  email: "",
+  phone: "",
+  role: "Administrator",
   avatar: "",
   currentPassword: "",
   newPassword: "",
@@ -69,6 +76,28 @@ export default function ProfilePage() {
 
   const fileInputRef =
     useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getAdminProfile()
+      .then((profile) => {
+        if (!active) return;
+        setForm((current) => ({
+          ...current,
+          ...profile,
+        }));
+      })
+      .catch((error) => {
+        if (active) {
+          setErrorMessage(getErrorMessage(error, "Unable to load your profile."));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateField = <K extends keyof ProfileForm>(
     key: K,
@@ -216,35 +245,24 @@ export default function ProfilePage() {
 
       const profilePayload = {
         fullName: form.fullName.trim(),
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
         avatar: form.avatar,
       };
 
-      console.log(
-        "Profile update:",
-        profilePayload
-      );
+      const response = await updateAdminProfile(profilePayload);
 
       if (form.newPassword) {
-        const passwordPayload = {
-          currentPassword:
-            form.currentPassword,
-          newPassword:
-            form.newPassword,
-        };
-
-        console.log(
-          "Password update requested:",
-          Boolean(passwordPayload.newPassword)
-        );
+        await adminChangePassword({
+          currentPassword: form.currentPassword,
+          newPassword: form.newPassword,
+          confirmPassword: form.confirmPassword,
+        });
       }
 
       setForm((current) => ({
         ...current,
-        fullName: current.fullName.trim(),
-        email: current.email.trim(),
-        phone: current.phone.trim(),
+        ...response.profile,
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
@@ -255,10 +273,8 @@ export default function ProfilePage() {
           ? "Profile and password updated successfully."
           : "Profile updated successfully."
       );
-    } catch {
-      setErrorMessage(
-        "Unable to save your changes. Please try again."
-      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Unable to save your changes. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -321,8 +337,7 @@ export default function ProfilePage() {
               </div>
 
               <p className="mt-3 text-sm font-semibold text-foreground">
-                {form.fullName ||
-                  "Royal Chins Admin"}
+                {form.fullName || "Wazni Administrator"}
               </p>
 
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -412,7 +427,7 @@ export default function ProfilePage() {
                         event.target.value
                       )
                     }
-                    placeholder="admin@royalchins.ae"
+                    placeholder="admin@wazni.ae"
                     leftIcon={
                       <Mail className="h-5 w-5" />
                     }
