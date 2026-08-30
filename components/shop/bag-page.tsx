@@ -16,13 +16,10 @@ import { useMemo } from "react";
 import OrderSummary from "@/components/shop/OrderSummary";
 import { useCart } from "@/components/shop/cart-provider";
 
-import {
-  products,
-  type Product,
-} from "@/lib/shop-data";
+import type { StorefrontProduct } from "@/lib/storefront/types";
 
 type BagItem = {
-  product: Product;
+  product: StorefrontProduct;
   quantity: number;
 };
 
@@ -31,6 +28,8 @@ export default function BagPage() {
     items: cartLines,
     totalQuantity,
     hydrated,
+    catalogReady,
+    catalogProducts,
     setQuantity,
     removeItem: removeItemFromCart,
   } = useCart();
@@ -39,8 +38,8 @@ export default function BagPage() {
     () =>
       cartLines
         .map((line) => {
-          const product = products.find(
-            (item) => item.id === line.productId
+          const product = catalogProducts.find(
+            (item) => String(item.id) === String(line.productId)
           );
 
           return product
@@ -48,7 +47,7 @@ export default function BagPage() {
             : null;
         })
         .filter((item): item is BagItem => item !== null),
-    [cartLines]
+    [cartLines, catalogProducts]
   );
 
   const subtotal = useMemo(
@@ -63,21 +62,21 @@ export default function BagPage() {
     [items]
   );
 
-  function increaseQuantity(id: number) {
+  function increaseQuantity(id: string | number) {
     const item = items.find((line) => line.product.id === id);
     if (item) setQuantity(id, item.quantity + 1);
   }
 
-  function decreaseQuantity(id: number) {
+  function decreaseQuantity(id: string | number) {
     const item = items.find((line) => line.product.id === id);
     if (item) setQuantity(id, Math.max(1, item.quantity - 1));
   }
 
-  function removeItem(id: number) {
+  function removeItem(id: string | number) {
     removeItemFromCart(id);
   }
 
-  if (!hydrated) {
+  if (!hydrated || !catalogReady) {
     return <BagLoading />;
   }
 

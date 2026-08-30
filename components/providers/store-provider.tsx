@@ -44,7 +44,9 @@ type StoreContextValue = {
     password: string;
   }) => Promise<AuthUser>;
 
-  logout: () => void;
+  logout: () => Promise<void>;
+  saveProfile: (data: { firstName: string; lastName: string; email: string; phone: string; address?: CheckoutAddress }) => Promise<AuthUser>;
+  refreshCustomer: () => Promise<AuthUser | null>;
 
   addToCart: (
     item: Omit<CartItem, "quantity">,
@@ -79,8 +81,8 @@ type StoreContextValue = {
   ) => void;
 
   clearCheckout: () => void;
-  placeOrder: (items: CartItem[], total: number) => StoreOrder;
-  cancelOrder: (id: string) => void;
+  placeOrder: (items: CartItem[], total: number, paymentMethod?: PaymentMethod) => Promise<StoreOrder>;
+  cancelOrder: (id: string) => Promise<void>;
 };
 
 const StoreContext =
@@ -89,9 +91,7 @@ const StoreContext =
   );
 
 const CART_KEY = "wazni-cart";
-const USER_KEY = "wazni-user";
 const CHECKOUT_KEY = "wazni-checkout";
-const ORDERS_KEY = "wazni-orders";
 
 const defaultCheckout: CheckoutState = {
   deliveryMethod: "delivery",
@@ -123,9 +123,6 @@ export default function StoreProvider({
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
       try {
-      const savedUser =
-        localStorage.getItem(USER_KEY);
-
       const savedCart =
         localStorage.getItem(CART_KEY);
 
@@ -133,14 +130,6 @@ export default function StoreProvider({
         localStorage.getItem(
           CHECKOUT_KEY
         );
-      const savedOrders = localStorage.getItem(ORDERS_KEY);
-
-      if (savedUser) {
-        setUser(
-          JSON.parse(savedUser)
-        );
-      }
-
       if (savedCart) {
         setCartItems(
           JSON.parse(savedCart)
@@ -155,12 +144,7 @@ export default function StoreProvider({
           ),
         });
       }
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
       } catch {
-      localStorage.removeItem(
-        USER_KEY
-      );
-
       localStorage.removeItem(
         CART_KEY
       );
@@ -168,13 +152,25 @@ export default function StoreProvider({
       localStorage.removeItem(
         CHECKOUT_KEY
       );
-      localStorage.removeItem(ORDERS_KEY);
-      } finally {
-        setReady(true);
       }
     }, 0);
 
     return () => window.clearTimeout(hydrationTimer);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch("/api/customer/auth/session", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/customer/orders", { cache: "no-store" }).then((response) => response.ok ? response.json() : { orders: [] }),
+    ]).then(([session, orderData]) => {
+      if (!active) return;
+      setUser(session.user ?? null);
+      setOrders(orderData.orders ?? []);
+    }).finally(() => {
+      if (active) setReady(true);
+    });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -189,94 +185,23 @@ export default function StoreProvider({
   useEffect(() => {
     if (!ready) return;
 
-    if (user) {
-      localStorage.setItem(
-        USER_KEY,
-        JSON.stringify(user)
-      );
-    } else {
-      localStorage.removeItem(
-        USER_KEY
-      );
-    }
-  }, [user, ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-
     localStorage.setItem(
       CHECKOUT_KEY,
       JSON.stringify(checkout)
     );
   }, [checkout, ready]);
 
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  }, [orders, ready]);
-
   async function login(
     email: string,
     password: string
   ) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, 500)
-    );
-
-    if (
-      !email.trim() ||
-      !password.trim()
-    ) {
-      throw new Error(
-        "Email and password are required."
-      );
-    }
-
-    const storedUser =
-      localStorage.getItem(
-        "wazni-registered-user"
-      );
-
-    let nextUser: AuthUser;
-
-    if (storedUser) {
-      const parsed =
-        JSON.parse(storedUser);
-
-      if (
-        parsed.email
-          .toLowerCase()
-          .trim() !==
-        email.toLowerCase().trim()
-      ) {
-        throw new Error(
-          "No account was found with this email."
-        );
-      }
-
-      nextUser = {
-        id: parsed.id,
-        firstName:
-          parsed.firstName,
-        lastName:
-          parsed.lastName,
-        email: parsed.email,
-        phone: parsed.phone,
-      };
-    } else {
-      nextUser = {
-        id: "customer-demo",
-        firstName: "Ahmed",
-        lastName: "Daniyal",
-        email: email.trim(),
-        phone:
-          "+971 50 123 4567",
-      };
-    }
-
-    setUser(nextUser);
-
-    return nextUser;
+    const response = await fetch("/api/customer/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Unable to sign in.");
+    setUser(result.user);
+    const ordersResponse = await fetch("/api/customer/orders", { cache: "no-store" });
+    if (ordersResponse.ok) setOrders((await ordersResponse.json()).orders ?? []);
+    return result.user as AuthUser;
   }
 
   async function register(data: {
@@ -286,34 +211,34 @@ export default function StoreProvider({
     phone: string;
     password: string;
   }) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, 500)
-    );
-
-    const nextUser: AuthUser = {
-      id: `customer-${Date.now()}`,
-      firstName:
-        data.firstName.trim(),
-      lastName:
-        data.lastName.trim(),
-      email: data.email
-        .trim()
-        .toLowerCase(),
-      phone: data.phone.trim(),
-    };
-
-    localStorage.setItem(
-      "wazni-registered-user",
-      JSON.stringify(nextUser)
-    );
-
-    setUser(nextUser);
-
-    return nextUser;
+    const response = await fetch("/api/customer/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Unable to create account.");
+    setUser(result.user);
+    setOrders([]);
+    return result.user as AuthUser;
   }
 
-  function logout() {
+  async function logout() {
+    await fetch("/api/customer/auth/logout", { method: "POST" });
     setUser(null);
+    setOrders([]);
+  }
+
+  async function saveProfile(data: { firstName: string; lastName: string; email: string; phone: string; address?: CheckoutAddress }) {
+    const response = await fetch("/api/customer/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Unable to save delivery details.");
+    setUser(result.user);
+    return result.user as AuthUser;
+  }
+
+  async function refreshCustomer() {
+    const response = await fetch("/api/customer/auth/session", { cache: "no-store" });
+    const result = await response.json();
+    const nextUser = (result.user ?? null) as AuthUser | null;
+    setUser(nextUser);
+    return nextUser;
   }
 
   function addToCart(
@@ -430,25 +355,20 @@ export default function StoreProvider({
     setCheckout(defaultCheckout);
   }
 
-  function placeOrder(items: CartItem[], total: number) {
-    const order: StoreOrder = {
-      id: `WZ-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
-      date: new Intl.DateTimeFormat("en-AE", { dateStyle: "long" }).format(new Date()),
-      status: "Confirmed",
-      total,
-      items,
-      address: checkout.selectedAddress,
-      deliveryMethod: checkout.deliveryMethod,
-      paymentMethod: checkout.paymentMethod,
-    };
+  async function placeOrder(items: CartItem[], _total: number, paymentMethod?: PaymentMethod) {
+    const response = await fetch("/api/customer/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: items.map((item) => ({ productId: String(item.id), quantity: item.quantity })), paymentMethod: paymentMethod ?? checkout.paymentMethod, deliveryMethod: checkout.deliveryMethod, notes: checkout.deliveryNotes, address: checkout.selectedAddress ? { emirate: checkout.selectedAddress.emirate, area: checkout.selectedAddress.area, street: checkout.selectedAddress.street, unit: checkout.selectedAddress.unit, phone: checkout.selectedAddress.phone } : null }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Unable to place your order.");
+    const order = result.order as StoreOrder;
     setOrders((current) => [order, ...current]);
     return order;
   }
 
-  function cancelOrder(id: string) {
-    setOrders((current) => current.map((order) =>
-      order.id === id ? { ...order, status: "Cancelled" as const } : order
-    ));
+  async function cancelOrder(id: string) {
+    const response = await fetch(`/api/customer/orders/${encodeURIComponent(id)}`, { method: "PATCH" });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Unable to cancel this order.");
+    setOrders((current) => current.map((order) => order.id === id ? result.order : order));
   }
 
   const cartCount = useMemo(
@@ -490,6 +410,8 @@ export default function StoreProvider({
         login,
         register,
         logout,
+        saveProfile,
+        refreshCustomer,
 
         addToCart,
         removeFromCart,

@@ -21,6 +21,8 @@ import {
 import {
   useStore,
 } from "@/components/providers/store-provider";
+import { useCart } from "@/components/shop/cart-provider";
+import { consumePendingCartAction } from "@/lib/cart/pending-action";
 
 import {
   AuthField,
@@ -36,6 +38,7 @@ export default function RegisterForm() {
 
   const { register } =
     useStore();
+  const { addItem } = useCart();
 
   const [
     firstName,
@@ -123,17 +126,20 @@ export default function RegisterForm() {
         password,
       });
 
+      const pendingAction = consumePendingCartAction();
+      if (pendingAction) addItem(pendingAction.productId, pendingAction.quantity);
+
       const redirect =
         searchParams.get(
           "redirect"
         );
 
       router.push(
-        redirect || "/account"
+        pendingAction?.destination || redirect || "/account"
       );
-    } catch {
+    } catch (error) {
       setError(
-        "Unable to create account."
+        error instanceof Error ? error.message : "Unable to create account."
       );
     } finally {
       setLoading(false);

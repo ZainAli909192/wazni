@@ -71,7 +71,7 @@ export default function OrderConfirmation() {
 
             <ConfirmationStat
               label="Payment"
-              value={order.paymentMethod === "card" ? "Paid by Card" : order.paymentMethod}
+              value={order.paymentStatus === "PAID" ? "Paid" : `Pending · ${order.paymentMethod}`}
               last
             />
           </div>

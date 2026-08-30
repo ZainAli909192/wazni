@@ -56,55 +56,13 @@ export default function JewelleryDetails({
   const [openSection, setOpenSection] =
     useState<string | null>("delivery");
   const gallery = useMemo(() => {
-    const suppliedImages =
-      product.images &&
-        product.images.length > 0
-        ? product.images
-        : [product.image];
-
-    const sameType = catalogProducts.filter(
-      (item) =>
-        item.slug !== product.slug &&
-        item.productType ===
-        product.productType
-    );
-
-    const remaining = catalogProducts.filter(
-      (item) =>
-        item.slug !== product.slug &&
-        item.productType !==
-        product.productType
-    );
-
-    const additionalImages = [
-      ...sameType,
-      ...remaining,
-    ]
-      .map((item) => item.image)
-      .filter(
-        (image, index, images) =>
-          !suppliedImages.includes(image) &&
-          images.indexOf(image) === index
-      )
-      .slice(
-        0,
-        Math.max(
-          0,
-          3 - suppliedImages.length
-        )
-      );
-
-    return [
-      ...suppliedImages,
-      ...additionalImages,
-    ].slice(0, 3);
-  }, [
-    product.image,
-    product.images,
-    product.productType,
-    product.slug,
-    catalogProducts,
-  ]);
+    const databaseImages = (product.images ?? []).filter(Boolean);
+    return databaseImages.length > 0
+      ? databaseImages
+      : product.image
+        ? [product.image]
+        : [];
+  }, [product.image, product.images]);
 
   const formattedPrice =
     product.price.toLocaleString("en-AE");

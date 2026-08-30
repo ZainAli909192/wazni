@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getPublicCatalog } from "@/lib/storefront/client";
+import type { StorefrontProduct } from "@/lib/storefront/types";
 
 const CART_STORAGE_KEY = "wazni-cart-v1";
 const MAX_QUANTITY = 99;
@@ -22,6 +24,8 @@ type CartContextValue = {
   items: CartLine[];
   totalQuantity: number;
   hydrated: boolean;
+  catalogReady: boolean;
+  catalogProducts: StorefrontProduct[];
   addItem: (productId: string | number, quantity?: number) => void;
   setQuantity: (productId: string | number, quantity: number) => void;
   removeItem: (productId: string | number) => void;
@@ -66,6 +70,24 @@ function readStoredCart(): CartLine[] {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<StorefrontProduct[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    getPublicCatalog()
+      .then((catalog) => {
+        if (!active) return;
+        setCatalogProducts(catalog.products);
+        setCatalogReady(true);
+      })
+      .catch(() => {
+        // Keep the existing cart intact if the catalogue is temporarily unavailable.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -94,40 +116,63 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrated, items]);
 
+  useEffect(() => {
+    if (!hydrated || !catalogReady) return;
+
+    const productsById = new Map(
+      catalogProducts.map((product) => [String(product.id), product])
+    );
+    setItems((current) =>
+      current.flatMap((line) => {
+        const product = productsById.get(String(line.productId));
+        if (!product || product.quantity <= 0) return [];
+        return [{
+          productId: product.id,
+          quantity: Math.min(line.quantity, product.quantity, MAX_QUANTITY),
+        }];
+      })
+    );
+  }, [catalogProducts, catalogReady, hydrated]);
+
   const addItem = useCallback((productId: string | number, quantity = 1) => {
     const amount = Math.max(1, Math.floor(quantity));
     setItems((current) => {
-      const existing = current.find((line) => line.productId === productId);
+      const product = catalogProducts.find((item) => String(item.id) === String(productId));
+      if (catalogReady && (!product || product.quantity <= 0)) return current;
+      const limit = Math.min(MAX_QUANTITY, product?.quantity ?? MAX_QUANTITY);
+      const existing = current.find((line) => String(line.productId) === String(productId));
 
       if (!existing) {
-        return [...current, { productId, quantity: Math.min(MAX_QUANTITY, amount) }];
+        return [...current, { productId, quantity: Math.min(limit, amount) }];
       }
 
       return current.map((line) =>
-        line.productId === productId
-          ? { ...line, quantity: Math.min(MAX_QUANTITY, line.quantity + amount) }
+        String(line.productId) === String(productId)
+          ? { ...line, quantity: Math.min(limit, line.quantity + amount) }
           : line
       );
     });
-  }, []);
+  }, [catalogProducts, catalogReady]);
 
   const setQuantity = useCallback((productId: string | number, quantity: number) => {
     if (quantity <= 0) {
-      setItems((current) => current.filter((line) => line.productId !== productId));
+      setItems((current) => current.filter((line) => String(line.productId) !== String(productId)));
       return;
     }
 
+    const product = catalogProducts.find((item) => String(item.id) === String(productId));
+    const limit = Math.min(MAX_QUANTITY, product?.quantity ?? MAX_QUANTITY);
     setItems((current) =>
       current.map((line) =>
-        line.productId === productId
-          ? { ...line, quantity: Math.min(MAX_QUANTITY, Math.max(1, Math.floor(quantity))) }
+        String(line.productId) === String(productId)
+          ? { ...line, quantity: Math.min(limit, Math.max(1, Math.floor(quantity))) }
           : line
       )
     );
-  }, []);
+  }, [catalogProducts]);
 
   const removeItem = useCallback((productId: string | number) => {
-    setItems((current) => current.filter((line) => line.productId !== productId));
+    setItems((current) => current.filter((line) => String(line.productId) !== String(productId)));
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
@@ -136,13 +181,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       items,
       hydrated,
+      catalogReady,
+      catalogProducts,
       totalQuantity: items.reduce((total, line) => total + line.quantity, 0),
       addItem,
       setQuantity,
       removeItem,
       clearCart,
     }),
-    [addItem, clearCart, hydrated, items, removeItem, setQuantity]
+    [addItem, catalogProducts, catalogReady, clearCart, hydrated, items, removeItem, setQuantity]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

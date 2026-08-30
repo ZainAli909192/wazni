@@ -79,9 +79,8 @@ useEffect(() => {
   }
 }, [isAuthenticated, pathname, ready, router]);
 
-function handleLogout() {
-  logout();
-
+async function handleLogout() {
+  await logout();
   router.push(
     "/account/login"
   );

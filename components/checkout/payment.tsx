@@ -15,9 +15,6 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import {
-  products,
-} from "@/lib/shop-data";
 import { useCart } from "@/components/shop/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 
@@ -30,12 +27,12 @@ type PaymentMethod =
 export default function PaymentPage() {
   const router = useRouter();
   const isCompletingOrder = useRef(false);
-  const { items: cartLines, hydrated, clearCart } = useCart();
+  const { items: cartLines, hydrated, catalogReady, catalogProducts, clearCart } = useCart();
   const { ready, isAuthenticated, checkout, setPaymentMethod: savePaymentMethod, placeOrder, clearCheckout } = useStore();
   const items = useMemo(() => cartLines.flatMap((line) => {
-    const product = products.find((item) => item.id === line.productId);
+    const product = catalogProducts.find((item) => String(item.id) === String(line.productId));
     return product ? [{ product, quantity: line.quantity }] : [];
-  }), [cartLines]);
+  }), [cartLines, catalogProducts]);
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("card");
@@ -53,33 +50,38 @@ export default function PaymentPage() {
   );
 
   useEffect(() => {
-    if (!ready || !hydrated) return;
+    if (!ready || !hydrated || !catalogReady) return;
     if (isCompletingOrder.current) return;
     if (!isAuthenticated) router.replace("/account/login?redirect=%2Fpayment");
     else if (!items.length) router.replace("/bag");
     else if (checkout.deliveryMethod === "delivery" && !checkout.selectedAddress) router.replace("/checkout");
-  }, [checkout.deliveryMethod, checkout.selectedAddress, hydrated, isAuthenticated, items.length, ready, router]);
+  }, [catalogReady, checkout.deliveryMethod, checkout.selectedAddress, hydrated, isAuthenticated, items.length, ready, router]);
 
-  function handlePayment() {
+  async function handlePayment() {
     if (isCompletingOrder.current) return;
     isCompletingOrder.current = true;
 
     savePaymentMethod(paymentMethod);
-    const order = placeOrder(items.map(({ product, quantity }) => ({
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
-      image: product.image,
-      sku: product.sku,
-      price: product.price,
-      quantity,
-    })), subtotal);
-    router.push(`/order-confirmation?order=${encodeURIComponent(order.id)}`);
-    clearCart();
-    clearCheckout();
+    try {
+      const order = await placeOrder(items.map(({ product, quantity }) => ({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        image: product.image,
+        sku: product.sku,
+        price: product.price,
+        quantity,
+      })), subtotal, paymentMethod);
+      router.push(`/order-confirmation?order=${encodeURIComponent(order.id)}`);
+      clearCart();
+      clearCheckout();
+    } catch (error) {
+      isCompletingOrder.current = false;
+      window.alert(error instanceof Error ? error.message : "Unable to place your order.");
+    }
   }
 
-  if (!ready || !hydrated || !isAuthenticated || !items.length) {
+  if (!ready || !hydrated || !catalogReady || !isAuthenticated || !items.length) {
     return <main className="min-h-[60vh] bg-[#FCFAF6]" aria-busy="true" />;
   }
 

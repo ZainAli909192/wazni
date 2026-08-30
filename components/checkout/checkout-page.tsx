@@ -14,9 +14,6 @@ import {
   Store,
   Truck,
 } from "lucide-react";
-import {
-  products,
-} from "@/lib/shop-data";
 import { useCart } from "@/components/shop/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 
@@ -32,7 +29,7 @@ const emirates = [
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items: cartLines, hydrated } = useCart();
+  const { items: cartLines, hydrated, catalogReady, catalogProducts } = useCart();
   const {
     ready,
     user,
@@ -41,29 +38,32 @@ export default function CheckoutPage() {
     setDeliveryMethod,
     setSelectedAddress,
     setDeliveryNotes,
+    saveProfile,
   } = useStore();
   const deliveryMethod = checkout.deliveryMethod;
+  const savedAddress = checkout.selectedAddress ?? user?.addresses.find((address) => address.isDefault) ?? user?.addresses[0] ?? null;
 
   const checkoutItems = useMemo(() => cartLines.flatMap((line) => {
-    const product = products.find((item) => item.id === line.productId);
+    const product = catalogProducts.find((item) => String(item.id) === String(line.productId));
     return product ? [{ product, quantity: line.quantity }] : [];
-  }), [cartLines]);
+  }), [cartLines, catalogProducts]);
 
   useEffect(() => {
-    if (!ready || !hydrated) return;
+    if (!ready || !hydrated || !catalogReady) return;
     if (!isAuthenticated) {
       router.replace("/account/login?redirect=%2Fcheckout");
     } else if (!checkoutItems.length) {
       router.replace("/bag");
     }
-  }, [checkoutItems.length, hydrated, isAuthenticated, ready, router]);
+  }, [catalogReady, checkoutItems.length, hydrated, isAuthenticated, ready, router]);
 
-  function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
 
-    setDeliveryNotes(String(data.get("notes") ?? ""));
-    setSelectedAddress(deliveryMethod === "delivery" ? {
+    const deliveryNotes = String(data.get("notes") ?? "");
+    const address = deliveryMethod === "delivery" ? {
+      id: savedAddress?.id,
       label: "Home",
       firstName: String(data.get("firstName") ?? ""),
       lastName: String(data.get("lastName") ?? ""),
@@ -74,11 +74,14 @@ export default function CheckoutPage() {
       street: String(data.get("street") ?? ""),
       unit: String(data.get("unit") ?? ""),
       landmark: String(data.get("landmark") ?? ""),
-    } : null);
+    } as const : null;
+    setDeliveryNotes(deliveryNotes);
+    setSelectedAddress(address);
+    if (user) await saveProfile({ firstName: String(data.get("firstName") ?? ""), lastName: String(data.get("lastName") ?? ""), email: String(data.get("email") ?? user.email), phone: String(data.get("phone") ?? ""), address: address ?? undefined });
     router.push("/payment");
   }
 
-  if (!ready || !hydrated || !isAuthenticated || !checkoutItems.length) {
+  if (!ready || !hydrated || !catalogReady || !isAuthenticated || !checkoutItems.length) {
     return <main className="min-h-[60vh] bg-[#FCFAF6]" aria-busy="true" />;
   }
 
@@ -230,6 +233,7 @@ export default function CheckoutPage() {
                         "United Arab Emirates",
                       ]}
                       required
+                      defaultValue={savedAddress?.country ?? "United Arab Emirates"}
                     />
                   </div>
 
@@ -239,6 +243,7 @@ export default function CheckoutPage() {
                     options={emirates}
                     placeholder="Select emirate"
                     required
+                    defaultValue={savedAddress?.emirate}
                   />
 
                   <Field
@@ -246,6 +251,7 @@ export default function CheckoutPage() {
                     name="area"
                     placeholder="Area / neighbourhood"
                     required
+                    defaultValue={savedAddress?.area}
                   />
 
                   <div className="sm:col-span-2">
@@ -254,6 +260,7 @@ export default function CheckoutPage() {
                       name="street"
                       placeholder="Street name, building or villa"
                       required
+                      defaultValue={savedAddress?.street}
                     />
                   </div>
 
@@ -261,12 +268,14 @@ export default function CheckoutPage() {
                     label="Apartment / Villa"
                     name="unit"
                     placeholder="Apartment, floor or villa number"
+                    defaultValue={savedAddress?.unit}
                   />
 
                   <Field
                     label="Landmark"
                     name="landmark"
                     placeholder="Nearby landmark"
+                    defaultValue={savedAddress?.landmark}
                   />
 
                   <div className="sm:col-span-2">
@@ -592,12 +601,14 @@ function SelectField({
   options,
   placeholder,
   required = false,
+  defaultValue,
 }: {
   label: string;
   name: string;
   options: string[];
   placeholder?: string;
   required?: boolean;
+  defaultValue?: string;
 }) {
   return (
     <label className="block">
@@ -614,7 +625,7 @@ function SelectField({
       <select
         name={name}
         required={required}
-        defaultValue=""
+        defaultValue={defaultValue ?? ""}
         className="
           h-[52px] w-full
           border border-[#071426]/15

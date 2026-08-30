@@ -12,9 +12,7 @@ import {
   useState,
 } from "react";
 
-import type {
-  CustomerAddress,
-} from "@/lib/account-data";
+import type { CheckoutAddress as CustomerAddress } from "@/lib/store-types";
 
 type AddressForm = Omit<
   CustomerAddress,
@@ -28,6 +26,7 @@ const emptyAddress: AddressForm = {
   lastName: "",
 
   phone: "",
+  country: "United Arab Emirates",
 
   emirate: "Abu Dhabi",
   area: "",
@@ -65,7 +64,7 @@ export default function AddressModal({
   onClose: () => void;
   onSave: (
     address: AddressForm
-  ) => void;
+  ) => void | Promise<void>;
 }) {
   const [form, setForm] =
     useState<AddressForm>(
@@ -107,12 +106,12 @@ export default function AddressModal({
     }));
   }
 
-  function handleSubmit(
+  async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    onSave(form);
+    await onSave(form);
   }
 
   return (

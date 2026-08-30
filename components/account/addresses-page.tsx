@@ -16,10 +16,8 @@ import {
 import AccountShell from "./account-shell";
 import AddressModal from "./address-modal";
 
-import {
-  mockAddresses,
-  type CustomerAddress,
-} from "@/lib/account-data";
+import type { CheckoutAddress as CustomerAddress } from "@/lib/store-types";
+import { useStore } from "@/components/providers/store-provider";
 
 type AddressForm = Omit<
   CustomerAddress,
@@ -27,10 +25,9 @@ type AddressForm = Omit<
 >;
 
 export default function AddressesPage() {
-  const [addresses, setAddresses] =
-    useState<CustomerAddress[]>(
-      mockAddresses
-    );
+  const { user, refreshCustomer } = useStore();
+  const addresses = user?.addresses ?? [];
+  const [error, setError] = useState("");
 
   const [modalOpen, setModalOpen] =
     useState(false);
@@ -55,99 +52,36 @@ export default function AddressesPage() {
     setModalOpen(true);
   }
 
-  function saveAddress(
+  async function saveAddress(
     values: AddressForm
   ) {
-    if (editingAddress) {
-      setAddresses((current) => {
-        let updated = current.map(
-          (address) =>
-            address.id ===
-            editingAddress.id
-              ? {
-                  ...address,
-                  ...values,
-                }
-              : address
-        );
-
-        if (values.isDefault) {
-          updated = updated.map(
-            (address) => ({
-              ...address,
-
-              isDefault:
-                address.id ===
-                editingAddress.id,
-            })
-          );
-        }
-
-        return updated;
-      });
-    } else {
-      setAddresses((current) => {
-        const nextId =
-          current.length > 0
-            ? Math.max(
-                ...current.map(
-                  (item) =>
-                    item.id
-                )
-              ) + 1
-            : 1;
-
-        const newAddress: CustomerAddress =
-          {
-            id: nextId,
-            ...values,
-          };
-
-        if (values.isDefault) {
-          return [
-            ...current.map(
-              (address) => ({
-                ...address,
-                isDefault: false,
-              })
-            ),
-            newAddress,
-          ];
-        }
-
-        return [
-          ...current,
-          newAddress,
-        ];
-      });
-    }
-
+    setError("");
+    const response = await fetch(editingAddress ? `/api/customer/addresses/${editingAddress.id}` : "/api/customer/addresses", { method: editingAddress ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+    const result = await response.json();
+    if (!response.ok) { setError(result.error ?? "Unable to save this address."); return; }
+    await refreshCustomer();
     setModalOpen(false);
     setEditingAddress(null);
   }
 
-  function removeAddress(
-    id: number
+  async function removeAddress(
+    id: string
   ) {
-    setAddresses((current) =>
-      current.filter(
-        (address) =>
-          address.id !== id
-      )
-    );
+    setError("");
+    const response = await fetch(`/api/customer/addresses/${id}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok) { setError(result.error ?? "Unable to remove this address."); return; }
+    await refreshCustomer();
   }
 
-  function setDefault(
-    id: number
+  async function setDefault(
+    id: string
   ) {
-    setAddresses((current) =>
-      current.map((address) => ({
-        ...address,
-
-        isDefault:
-          address.id === id,
-      }))
-    );
+    setError("");
+    const response = await fetch(`/api/customer/addresses/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isDefault: true }) });
+    const result = await response.json();
+    if (!response.ok) { setError(result.error ?? "Unable to update the default address."); return; }
+    await refreshCustomer();
   }
 
   return (
@@ -183,6 +117,8 @@ export default function AddressesPage() {
         </div>
 
         {/* ADDRESS GRID */}
+
+        {error && <p className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-[10px] text-red-700">{error}</p>}
 
         {addresses.length ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -282,7 +218,7 @@ export default function AddressesPage() {
                           type="button"
                           onClick={() =>
                             setDefault(
-                              address.id
+                              address.id!
                             )
                           }
                           className="flex min-h-[38px] items-center gap-2 border border-[#C7A05A]/35 bg-[#FAF7F1] px-4 text-[8px] font-semibold uppercase tracking-[0.11em] text-[#B88734]"
@@ -298,7 +234,7 @@ export default function AddressesPage() {
                           type="button"
                           onClick={() =>
                             removeAddress(
-                              address.id
+                              address.id!
                             )
                           }
                           className="flex min-h-[38px] items-center gap-2 border border-[#A94E4E]/20 bg-white px-4 text-[8px] font-semibold uppercase tracking-[0.11em] text-[#A94E4E] transition-colors hover:bg-[#FFF7F7]"

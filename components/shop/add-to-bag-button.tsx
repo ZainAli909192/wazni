@@ -13,6 +13,8 @@ import {
 } from "react";
 
 import { useCart } from "@/components/shop/cart-provider";
+import { useStore } from "@/components/providers/store-provider";
+import { savePendingCartAction } from "@/lib/cart/pending-action";
 
 type Props = {
   product: {
@@ -34,11 +36,18 @@ export default function AddToBagButton({
   const router = useRouter();
 
   const { addItem } = useCart();
+  const { ready, isAuthenticated } = useStore();
 
   const [added, setAdded] =
     useState(false);
 
   function handleAdd() {
+    if (!ready) return;
+    if (!isAuthenticated) {
+      savePendingCartAction({ productId: product.id, quantity, destination: "/bag" });
+      router.push("/account/login?redirect=%2Fbag");
+      return;
+    }
     addItem(product.id, quantity);
 
     setAdded(true);
@@ -48,6 +57,7 @@ export default function AddToBagButton({
         setAdded(false),
       1500
     );
+    router.push("/bag");
   }
 
   return (
@@ -69,6 +79,12 @@ export default function AddToBagButton({
       <button
         type="button"
         onClick={() => {
+          if (!ready) return;
+          if (!isAuthenticated) {
+            savePendingCartAction({ productId: product.id, quantity, destination: "/checkout" });
+            router.push("/account/login?redirect=%2Fcheckout");
+            return;
+          }
           addItem(product.id, quantity);
 
           router.push("/checkout");

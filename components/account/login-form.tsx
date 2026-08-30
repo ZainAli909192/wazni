@@ -22,6 +22,8 @@ import {
 import {
   useStore,
 } from "@/components/providers/store-provider";
+import { useCart } from "@/components/shop/cart-provider";
+import { consumePendingCartAction } from "@/lib/cart/pending-action";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -30,6 +32,7 @@ export default function LoginForm() {
     useSearchParams();
 
   const { login } = useStore();
+  const { addItem } = useCart();
 
   const [email, setEmail] =
     useState("");
@@ -63,13 +66,16 @@ export default function LoginForm() {
         password
       );
 
+      const pendingAction = consumePendingCartAction();
+      if (pendingAction) addItem(pendingAction.productId, pendingAction.quantity);
+
       const redirect =
         searchParams.get(
           "redirect"
         );
 
       router.push(
-        redirect || "/account"
+        pendingAction?.destination || redirect || "/account"
       );
     } catch (error) {
       setError(

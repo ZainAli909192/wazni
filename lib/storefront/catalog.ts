@@ -6,7 +6,7 @@ const productInclude = { category: { select: { name: true } } } as const;
 const mapProduct = (product: Awaited<ReturnType<typeof findProduct>>) => product && ({
   id: product.id, name: product.name, slug: product.slug, sku: product.sku,
   price: product.salePrice ?? product.regularPrice, regularPrice: product.regularPrice, salePrice: product.salePrice,
-  image: product.images[0] ?? "/images/products/ring-1.png", images: product.images,
+  image: product.images[0] ?? "", images: product.images,
   productType: product.category.name, material: product.material, featured: product.featured,
   createdAt: product.createdAt.toISOString(), description: product.description,
   shortDescription: product.shortDescription, quantity: product.quantity,

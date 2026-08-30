@@ -38,12 +38,15 @@ export default function OrdersPage() {
   const [cancelOrder, setCancelOrder] =
     useState<CustomerOrder | null>(null);
 
-  function confirmCancellation() {
+  async function confirmCancellation() {
     if (!cancelOrder) return;
 
-    cancelStoredOrder(cancelOrder.id);
-
-    setCancelOrder(null);
+    try {
+      await cancelStoredOrder(cancelOrder.id);
+      setCancelOrder(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to cancel this order.");
+    }
   }
 
   return (

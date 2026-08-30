@@ -14,10 +14,11 @@ export type AuthUser = {
   lastName: string;
   email: string;
   phone: string;
+  addresses: CheckoutAddress[];
 };
 
 export type CheckoutAddress = {
-  id?: number;
+  id?: string;
   label: "Home" | "Office";
   firstName: string;
   lastName: string;
@@ -28,6 +29,7 @@ export type CheckoutAddress = {
   street: string;
   unit?: string;
   landmark?: string;
+  isDefault?: boolean;
 };
 
 export type DeliveryMethod =
@@ -47,6 +49,7 @@ export type CheckoutState = {
 };
 
 export type StoreOrder = {
+  databaseId?: string;
   id: string;
   date: string;
   status: "Confirmed" | "Processing" | "Delivered" | "Cancelled";
@@ -55,4 +58,5 @@ export type StoreOrder = {
   address: CheckoutAddress | null;
   deliveryMethod: DeliveryMethod;
   paymentMethod: PaymentMethod;
+  paymentStatus?: string;
 };

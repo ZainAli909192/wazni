@@ -147,15 +147,29 @@ model Customer {
   name        String
   email       String         @unique
   phone       String
+  passwordHash String?
   status      CustomerStatus @default(ACTIVE)
   adminNotes  String?
   lastLoginAt DateTime?
   addresses   CustomerAddress[]
   orders      Order[]
+  sessions    CustomerSession[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
   @@index([status])
+}
+
+model CustomerSession {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, expiresAt])
+  @@index([expiresAt])
 }
 
 model CustomerAddress {
@@ -165,6 +179,10 @@ model CustomerAddress {
   area       String
   address    String
   building   String
+  firstName  String?
+  lastName   String?
+  phone      String?
+  landmark   String?
   isDefault  Boolean  @default(false)
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
