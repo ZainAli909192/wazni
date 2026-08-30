@@ -14,26 +14,31 @@ type FooterSection = {
 
 const MAP_URL =
   "https://www.google.com/maps/search/?api=1&query=Wazni+Jewellery%2C+Al+Maqta%27+St+-+Rabdan+-+RB2+-+Abu+Dhabi";
-
+export const WAZNI_SOCIALS = {
+  instagram:
+    "https://www.instagram.com/waznijewellery_uae/",
+  whatsapp:
+    "https://wa.me/971562656550",
+} as const;
 const footerSections: FooterSection[] = [
   {
     title: "Get To Know Us",
     links: [
       { label: "About Us", href: "/about" },
       { label: "Our Store", href: "/our-store" },
-      { label: "Collections", href: "/collections" },
+      { label: "Collections", href: "/search?q=collections" },
       { label: "Contact Us", href: "/contact" },
     ],
   },
-  {
-    title: "Customer Care",
-    links: [
-      { label: "Contact Us", href: "/contact" },
-      { label: "Delivery Information", href: "/delivery" },
-      { label: "Returns & Exchanges", href: "/returns" },
-      { label: "Size Guide", href: "/size-guide" },
-    ],
-  },
+  // {
+  //   title: "Customer Care",
+  //   links: [
+  //     { label: "Contact Us", href: "/contact" },
+  //     { label: "Delivery Information", href: "/delivery" },
+  //     { label: "Returns & Exchanges", href: "/returns" },
+  //     { label: "Size Guide", href: "/size-guide" },
+  //   ],
+  // },
   {
     title: "Policies",
     links: [
@@ -89,10 +94,7 @@ export default function Footer() {
 
   return (
     <footer className="w-full">
-      {/* =========================================================
-          MOBILE / TABLET
-      ========================================================== */}
-
+  {/* mob tablet view  */}
       <div className="bg-white lg:hidden">
         {/* Accordion sections */}
         <div className="px-5 sm:px-7">
@@ -171,7 +173,7 @@ export default function Footer() {
         <div className="border-t border-[#071426]/10 bg-white px-5 py-8 sm:px-7">
           <div className="flex items-center justify-center gap-4 sm:gap-5">
             <a
-              href="#"
+              href="https://www.instagram.com/waznijewellery_uae/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
@@ -191,7 +193,7 @@ export default function Footer() {
             </a>
 
             <a
-              href="tel:+97125581720"
+              href="tel:025581720"
               aria-label="Call Wazni Jewellery"
               className="flex h-12 w-12 items-center justify-center rounded-full bg-[#C7A05A] !text-[#071426] !no-underline transition-all duration-300 hover:-translate-y-1 hover:bg-[#071426] hover:!text-white"
             >
@@ -239,10 +241,7 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* =========================================================
-          DESKTOP
-      ========================================================== */}
-
+{/* desktpo view  */}
       <div
         className="
           hidden bg-[#071426] lg:block
@@ -365,7 +364,7 @@ export default function Footer() {
               </a>
 
               <a
-                href="tel:+97125581720"
+                href="tel:025581720"
                 aria-label="Call Wazni Jewellery"
                 className="
                   flex h-10 w-10 items-center justify-center
@@ -431,11 +430,8 @@ export default function Footer() {
   );
 }
 
-/* ============================================================
-   FILLED ICONS
-============================================================ */
-
-function FilledInstagramIcon({
+// Filled icons 
+export function FilledInstagramIcon({
   className = "",
 }: {
   className?: string;
@@ -452,7 +448,7 @@ function FilledInstagramIcon({
   );
 }
 
-function FilledWhatsAppIcon({
+export function FilledWhatsAppIcon({
   className = "",
 }: {
   className?: string;
@@ -469,7 +465,7 @@ function FilledWhatsAppIcon({
   );
 }
 
-function FilledPhoneIcon({
+export function FilledPhoneIcon({
   className = "",
 }: {
   className?: string;
@@ -486,7 +482,7 @@ function FilledPhoneIcon({
   );
 }
 
-function FilledLocationIcon({
+export function FilledLocationIcon({
   className = "",
 }: {
   className?: string;
@@ -503,7 +499,7 @@ function FilledLocationIcon({
   );
 }
 
-function FilledPlusIcon({
+export function FilledPlusIcon({
   className = "",
 }: {
   className?: string;
@@ -520,7 +516,7 @@ function FilledPlusIcon({
   );
 }
 
-function FilledMinusIcon({
+export function FilledMinusIcon({
   className = "",
 }: {
   className?: string;

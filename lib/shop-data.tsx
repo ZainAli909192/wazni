@@ -280,16 +280,4 @@ export const products: Product[] = [
     featured: true,
     createdAt: "2026-08-28",
   },
-    {
-    id: 16,
-    name: "Aquamarine Jewellery Set",
-    slug: "aquamarine-jewellery-set",
-    sku: "WZ-SET-001",
-    price: 63341,
-    image: "/images/products/bracelete-3.png",
-    productType: "Complete Sets",
-    material: "White Gold",
-    featured: true,
-    createdAt: "2026-08-28",
-  },
 ];

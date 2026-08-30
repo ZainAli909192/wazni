@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   ArrowRight,
@@ -16,15 +16,9 @@ import {
 } from "lucide-react";
 import {
   products,
-  type Product,
 } from "@/lib/shop-data";
-
-type CheckoutItem = {
-  product: Product;
-  quantity: number;
-};
-
-type DeliveryMethod = "delivery" | "pickup";
+import { useCart } from "@/components/shop/cart-provider";
+import { useStore } from "@/components/providers/store-provider";
 
 const emirates = [
   "Abu Dhabi",
@@ -37,43 +31,56 @@ const emirates = [
 ];
 
 export default function CheckoutPage() {
-  const checkoutItems: CheckoutItem[] = [
-    {
-      product:
-        products.find(
-          (item) =>
-            item.slug === "diamond-halo-ring"
-        ) ?? products[0],
-      quantity: 1,
-    },
-    {
-      product:
-        products.find(
-          (item) =>
-            item.slug === "rose-gold-diamond-ring"
-        ) ?? products[1],
-      quantity: 1,
-    },
-  ];
+  const router = useRouter();
+  const { items: cartLines, hydrated } = useCart();
+  const {
+    ready,
+    user,
+    isAuthenticated,
+    checkout,
+    setDeliveryMethod,
+    setSelectedAddress,
+    setDeliveryNotes,
+  } = useStore();
+  const deliveryMethod = checkout.deliveryMethod;
 
-  const [deliveryMethod, setDeliveryMethod] =
-    useState<DeliveryMethod>("delivery");
+  const checkoutItems = useMemo(() => cartLines.flatMap((line) => {
+    const product = products.find((item) => item.id === line.productId);
+    return product ? [{ product, quantity: line.quantity }] : [];
+  }), [cartLines]);
 
-  const subtotal = useMemo(
-    () =>
-      checkoutItems.reduce(
-        (total, item) =>
-          total +
-          item.product.price * item.quantity,
-        0
-      ),
-    [checkoutItems]
-  );
+  useEffect(() => {
+    if (!ready || !hydrated) return;
+    if (!isAuthenticated) {
+      router.replace("/account/login?redirect=%2Fcheckout");
+    } else if (!checkoutItems.length) {
+      router.replace("/bag");
+    }
+  }, [checkoutItems.length, hydrated, isAuthenticated, ready, router]);
 
-  const totalQuantity = checkoutItems.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+
+    setDeliveryNotes(String(data.get("notes") ?? ""));
+    setSelectedAddress(deliveryMethod === "delivery" ? {
+      label: "Home",
+      firstName: String(data.get("firstName") ?? ""),
+      lastName: String(data.get("lastName") ?? ""),
+      phone: String(data.get("phone") ?? ""),
+      country: String(data.get("country") ?? "United Arab Emirates"),
+      emirate: String(data.get("emirate") ?? ""),
+      area: String(data.get("area") ?? ""),
+      street: String(data.get("street") ?? ""),
+      unit: String(data.get("unit") ?? ""),
+      landmark: String(data.get("landmark") ?? ""),
+    } : null);
+    router.push("/payment");
+  }
+
+  if (!ready || !hydrated || !isAuthenticated || !checkoutItems.length) {
+    return <main className="min-h-[60vh] bg-[#FCFAF6]" aria-busy="true" />;
+  }
 
   return (
     <main className="min-h-screen bg-[#FCFAF6] text-[#071426]">
@@ -127,7 +134,7 @@ export default function CheckoutPage() {
               LEFT
           ================================================== */}
 
-          <div className="space-y-5">
+          <form className="space-y-5" onSubmit={handleCheckout}>
             {/* CONTACT */}
 
             <CheckoutSection
@@ -141,6 +148,7 @@ export default function CheckoutPage() {
                   name="firstName"
                   placeholder="First name"
                   required
+                  defaultValue={user?.firstName}
                 />
 
                 <Field
@@ -148,6 +156,7 @@ export default function CheckoutPage() {
                   name="lastName"
                   placeholder="Last name"
                   required
+                  defaultValue={user?.lastName}
                 />
 
                 <Field
@@ -156,6 +165,7 @@ export default function CheckoutPage() {
                   type="email"
                   placeholder="name@example.com"
                   required
+                  defaultValue={user?.email}
                 />
 
                 <Field
@@ -164,6 +174,7 @@ export default function CheckoutPage() {
                   type="tel"
                   placeholder="+971"
                   required
+                  defaultValue={user?.phone}
                 />
               </div>
             </CheckoutSection>
@@ -353,8 +364,8 @@ export default function CheckoutPage() {
   </Link>
 
   {/* CONTINUE TO PAYMENT */}
-  <Link
-    href="/payment"
+  <button
+    type="submit"
     className="
       group
       flex h-[58px] w-full
@@ -388,9 +399,9 @@ export default function CheckoutPage() {
         group-hover:translate-x-1
       "
     />
-  </Link>
+  </button>
 </div>
-          </div>
+          </form>
 
         </div>
       </section>
@@ -533,12 +544,14 @@ function Field({
   type = "text",
   placeholder,
   required = false,
+  defaultValue,
 }: {
   label: string;
   name: string;
   type?: string;
   placeholder: string;
   required?: boolean;
+  defaultValue?: string;
 }) {
   return (
     <label className="block">
@@ -556,13 +569,14 @@ function Field({
         name={name}
         type={type}
         required={required}
+        defaultValue={defaultValue}
         placeholder={placeholder}
         className="
           h-[52px] w-full
           border border-[#071426]/15
           bg-white px-4
           text-[13px] text-[#071426]
-          outline-none
+          outline-none focus-visible:ring-2 focus-visible:ring-[#C7A05A]
           transition-colors
           placeholder:text-[#071426]/30
           focus:border-[#C7A05A]
@@ -606,7 +620,7 @@ function SelectField({
           border border-[#071426]/15
           bg-white px-4
           text-[13px] text-[#071426]
-          outline-none
+          outline-none focus-visible:ring-2 focus-visible:ring-[#C7A05A]
           transition-colors
           focus:border-[#C7A05A]
         "
@@ -654,7 +668,7 @@ function TextArea({
           border border-[#071426]/15
           bg-white p-4
           text-[13px] text-[#071426]
-          outline-none
+          outline-none focus-visible:ring-2 focus-visible:ring-[#C7A05A]
           transition-colors
           placeholder:text-[#071426]/30
           focus:border-[#C7A05A]

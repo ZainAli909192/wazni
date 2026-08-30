@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   ArrowRight,
@@ -16,39 +17,25 @@ import {
 
 import {
   products,
-  type Product,
 } from "@/lib/shop-data";
-
-type OrderItem = {
-  product: Product;
-  quantity: number;
-};
+import { useCart } from "@/components/shop/cart-provider";
+import { useStore } from "@/components/providers/store-provider";
 
 type PaymentMethod =
   | "card"
-  // | "tamara"
-  // | "tabby"
+  | "tamara"
+  | "tabby"
   ;
 
 export default function PaymentPage() {
-  const items: OrderItem[] = [
-    {
-      product:
-        products.find(
-          (item) =>
-            item.slug === "diamond-halo-ring"
-        ) ?? products[0],
-      quantity: 1,
-    },
-    {
-      product:
-        products.find(
-          (item) =>
-            item.slug === "rose-gold-diamond-ring"
-        ) ?? products[1],
-      quantity: 1,
-    },
-  ];
+  const router = useRouter();
+  const isCompletingOrder = useRef(false);
+  const { items: cartLines, hydrated, clearCart } = useCart();
+  const { ready, isAuthenticated, checkout, setPaymentMethod: savePaymentMethod, placeOrder, clearCheckout } = useStore();
+  const items = useMemo(() => cartLines.flatMap((line) => {
+    const product = products.find((item) => item.id === line.productId);
+    return product ? [{ product, quantity: line.quantity }] : [];
+  }), [cartLines]);
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("card");
@@ -64,6 +51,37 @@ export default function PaymentPage() {
       ),
     [items]
   );
+
+  useEffect(() => {
+    if (!ready || !hydrated) return;
+    if (isCompletingOrder.current) return;
+    if (!isAuthenticated) router.replace("/account/login?redirect=%2Fpayment");
+    else if (!items.length) router.replace("/bag");
+    else if (checkout.deliveryMethod === "delivery" && !checkout.selectedAddress) router.replace("/checkout");
+  }, [checkout.deliveryMethod, checkout.selectedAddress, hydrated, isAuthenticated, items.length, ready, router]);
+
+  function handlePayment() {
+    if (isCompletingOrder.current) return;
+    isCompletingOrder.current = true;
+
+    savePaymentMethod(paymentMethod);
+    const order = placeOrder(items.map(({ product, quantity }) => ({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      image: product.image,
+      sku: product.sku,
+      price: product.price,
+      quantity,
+    })), subtotal);
+    router.push(`/order-confirmation?order=${encodeURIComponent(order.id)}`);
+    clearCart();
+    clearCheckout();
+  }
+
+  if (!ready || !hydrated || !isAuthenticated || !items.length) {
+    return <main className="min-h-[60vh] bg-[#FCFAF6]" aria-busy="true" />;
+  }
 
   return (
     <main className="min-h-screen bg-[#FCFAF6] text-[#071426]">
@@ -280,6 +298,7 @@ export default function PaymentPage() {
                   <PayButton
                     method={paymentMethod}
                     amount={subtotal}
+                    onPay={handlePayment}
                   />
                 </div>
               </div>
@@ -399,6 +418,7 @@ export default function PaymentPage() {
               <PayButton
                 method={paymentMethod}
                 amount={subtotal}
+                onPay={handlePayment}
               />
 
               <div className="mt-4 flex items-center justify-center gap-2 text-[8px] text-[#071426]/40">
@@ -515,7 +535,7 @@ function PaymentField({
           border border-[#071426]/15
           bg-white px-4
           text-[13px] text-[#071426]
-          outline-none
+          outline-none focus-visible:ring-2 focus-visible:ring-[#C7A05A]
           transition-colors
           placeholder:text-[#071426]/28
           focus:border-[#C7A05A]
@@ -565,9 +585,11 @@ function InstallmentPanel({
 function PayButton({
   method,
   amount,
+  onPay,
 }: {
   method: PaymentMethod;
   amount: number;
+  onPay: () => void;
 }) {
   const label =
     method === "card"
@@ -579,8 +601,9 @@ function PayButton({
         : "Continue With Tabby";
 
   return (
-    <Link
-      href="/order-confirmation"
+    <button
+      type="button"
+      onClick={onPay}
       className="
         group mt-7 flex min-h-[58px]
         w-full items-center
@@ -608,7 +631,7 @@ function PayButton({
         size={15}
         className="transition-transform duration-300 group-hover:translate-x-1"
       />
-    </Link>
+    </button>
   );
 }
 // progress 

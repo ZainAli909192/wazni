@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
+import AddToBagButton from "@/components/shop/add-to-bag-button";
 import {
   AnimatePresence,
   motion,
@@ -17,14 +16,11 @@ import {
   ChevronRight,
   Minus,
   Plus,
-  ShoppingBag,
 } from "lucide-react";
 
 import {
   useId,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -33,7 +29,6 @@ import {
   products,
   type Product,
 } from "@/lib/shop-data";
-import { useCart } from "@/components/shop/cart-provider";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -53,9 +48,6 @@ type Props = {
 export default function JewelleryDetails({
   product,
 }: Props) {
-  const router = useRouter();
-  const { addItem } = useCart();
-  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeImage, setActiveImage] =
     useState(0);
 
@@ -64,37 +56,10 @@ export default function JewelleryDetails({
 
   const [openSection, setOpenSection] =
     useState<string | null>("delivery");
-  const [addedToBag, setAddedToBag] =
-    useState(false);
-
-  useEffect(
-    () => () => {
-      if (addedTimer.current) clearTimeout(addedTimer.current);
-    },
-    []
-  );
-
-  const handleAddToBag = () => {
-    addItem(product.id, quantity);
-    setAddedToBag(true);
-
-    if (addedTimer.current) clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setAddedToBag(false), 1800);
-  };
-
-  const handleBuyNow = () => {
-    addItem(product.id, quantity);
-    router.push("/bag");
-  };
-
-  /*
-   * Prefer genuine gallery images. Until those are connected,
-   * complete the three-image viewer with catalogue imagery.
-   */
   const gallery = useMemo(() => {
     const suppliedImages =
       product.images &&
-      product.images.length > 0
+        product.images.length > 0
         ? product.images
         : [product.image];
 
@@ -102,14 +67,14 @@ export default function JewelleryDetails({
       (item) =>
         item.slug !== product.slug &&
         item.productType ===
-          product.productType
+        product.productType
     );
 
     const remaining = products.filter(
       (item) =>
         item.slug !== product.slug &&
         item.productType !==
-          product.productType
+        product.productType
     );
 
     const additionalImages = [
@@ -247,9 +212,8 @@ export default function JewelleryDetails({
                   >
                     <Image
                       src={gallery[activeImage]}
-                      alt={`${product.name} view ${
-                        activeImage + 1
-                      }`}
+                      alt={`${product.name} view ${activeImage + 1
+                        }`}
                       fill
                       priority
                       sizes="(max-width: 1023px) 100vw, 55vw"
@@ -309,20 +273,17 @@ export default function JewelleryDetails({
                       onClick={() =>
                         setActiveImage(index)
                       }
-                      aria-label={`View product image ${
-                        index + 1
-                      }`}
-                      className={`relative aspect-square cursor-pointer overflow-hidden border bg-[#F9F7F3] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 ${
-                        activeImage === index
+                      aria-label={`View product image ${index + 1
+                        }`}
+                      className={`relative aspect-square cursor-pointer overflow-hidden border bg-[#F9F7F3] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 ${activeImage === index
                           ? "border-[#B88734] shadow-[0_0_0_1px_#B88734]"
                           : "border-[#071426]/10 hover:border-[#B88734]/60"
-                      }`}
+                        }`}
                     >
                       <Image
                         src={image}
-                        alt={`${product.name} thumbnail ${
-                          index + 1
-                        }`}
+                        alt={`${product.name} thumbnail ${index + 1
+                          }`}
                         fill
                         sizes="150px"
                         className="bg-[#F9F7F3] object-contain p-2"
@@ -435,61 +396,25 @@ export default function JewelleryDetails({
               </div>
             </div>
 
-            {/* =================================================
-                PURCHASE BUTTONS
-            ================================================== */}
-
+            {/* buy now button  */}
             <div className="space-y-3 py-7">
-              <button
-                type="button"
-                onClick={handleAddToBag}
-                className="
-                  group flex min-h-[56px] w-full
-                  items-center justify-center gap-3
-                  bg-[#071426]
-                  px-6
-                  text-[10px] font-semibold uppercase
-                  tracking-[0.18em]
-                  text-[#C7A05A]
-                  transition-colors duration-300
-                  hover:bg-[#10243B]
-                  sm:text-[11px]
-                "
-              >
-                <ShoppingBag
-                  size={18}
-                  strokeWidth={1.5}
-                />
+              <AddToBagButton
+                product={{
+                  id: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  image:
+                    product.images?.[0] ??
+                    product.image,
+                  sku: product.sku,
+                  price: product.price,
+                }}
+                quantity={quantity}
+              />
 
-                <span aria-live="polite">
-                  {addedToBag ? "Added To Bag" : "Add To Bag"}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                className="
-                  flex min-h-[56px] w-full
-                  items-center justify-center
-                  bg-[#C7A05A]
-                  px-6
-                  text-[10px] font-semibold uppercase
-                  tracking-[0.18em]
-                  text-[#071426]
-                  transition-colors duration-300
-                  hover:bg-[#D7B772]
-                  sm:text-[11px]
-                "
-              >
-                Buy Now
-              </button>
             </div>
 
-            {/* =================================================
-                SERVICE INFORMATION
-            ================================================== */}
-
+          {/* service info  */}
             <div className="grid grid-cols-2 border-y border-[#071426]/10">
               <div className="flex items-center gap-2 border-r border-[#071426]/10 py-4 pr-3">
                 <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full bg-[#B88734] text-white">
@@ -797,7 +722,7 @@ function RelatedProducts({
       (item) =>
         item.id !== currentProduct.id &&
         item.productType ===
-          currentProduct.productType
+        currentProduct.productType
     );
 
     const otherProducts =
@@ -805,7 +730,7 @@ function RelatedProducts({
         (item) =>
           item.id !== currentProduct.id &&
           item.productType !==
-            currentProduct.productType
+          currentProduct.productType
       );
 
     return [

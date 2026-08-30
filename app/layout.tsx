@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import Footer from "@/components/layout/footer";
+
+import SiteChrome from "@/components/layout/site-chrome";
 import { CartProvider } from "@/components/shop/cart-provider";
+
+import Providers from "./providers";
+import {ConnectMenu }from "@/components/layout/connect-menu"; 
 import "./globals.css";
-import Header from "@/components/layout/header";
 
 export const metadata: Metadata = {
   title: "Wazni Jewellery",
@@ -17,15 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        
-        <CartProvider>
-        <Header />
-          <div className="min-h-screen">
-            {children}
-          </div>
-
-          <Footer />
-        </CartProvider>
+        <Providers>
+          <ConnectMenu />
+          <CartProvider>
+            <SiteChrome>{children}</SiteChrome>
+          </CartProvider>
+        </Providers>
       </body>
     </html>
   );

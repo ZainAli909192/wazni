@@ -1,14 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import {
   ArrowRight,
   Check,
   MapPin,
   PackageCheck,
 } from "lucide-react";
+import { useStore } from "@/components/providers/store-provider";
 
 export default function OrderConfirmation() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { ready, isAuthenticated, orders } = useStore();
+  const orderId = searchParams.get("order");
+  const order = orders.find((item) => item.id === orderId);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!isAuthenticated) router.replace("/account/login");
+    else if (!order) router.replace("/account/orders");
+  }, [isAuthenticated, order, ready, router]);
+
+  if (!ready || !isAuthenticated || !order) {
+    return <main className="min-h-[60vh] bg-[#FCFAF6]" aria-busy="true" />;
+  }
+
   return (
     <main className="min-h-screen bg-[#FCFAF6] text-[#071426]">
       <section className="relative overflow-hidden bg-[#071426] px-5 py-16 text-center sm:py-20 lg:py-24">
@@ -42,7 +61,7 @@ export default function OrderConfirmation() {
           <div className="grid sm:grid-cols-3">
             <ConfirmationStat
               label="Order Number"
-              value="WZ-2026-00128"
+              value={order.id}
             />
 
             <ConfirmationStat
@@ -52,7 +71,7 @@ export default function OrderConfirmation() {
 
             <ConfirmationStat
               label="Payment"
-              value="Paid"
+              value={order.paymentMethod === "card" ? "Paid by Card" : order.paymentMethod}
               last
             />
           </div>
@@ -100,7 +119,7 @@ export default function OrderConfirmation() {
               </Link>
 
               <Link
-                href="/"
+                href="/account/orders"
                 className="
                   flex min-h-[54px] items-center
                   justify-center
@@ -114,7 +133,7 @@ export default function OrderConfirmation() {
                   hover:border-[#C7A05A]
                 "
               >
-                Return Home
+                View My Orders
               </Link>
             </div>
           </div>
