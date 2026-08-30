@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import {
   useParams,
   useRouter,
@@ -13,8 +10,6 @@ import {
   ArrowLeft,
   Banknote,
   Check,
-  CircleCheckBig,
-  Clock3,
   CreditCard,
   Mail,
   MapPin,
@@ -30,32 +25,9 @@ import { AdminPageHeader } from "@/components/admin/layout/admin-page-header";
 import { CancelOrderDialog } from "@/components/admin/orders/cancel-order-dialog";
 import { FormAlert } from "@/components/forms/form-alert";
 import { Button } from "@/components/ui/button";
-import {
-  adminOrders,
-  type AdminOrderStatus as OrderStatus,
-} from "@/lib/admin/jewellery-data";
-
-type PaymentStatus =
-  | "Paid"
-  | "Pending"
-  | "Failed"
-  | "Refunded";
-
-type PaymentMethod =
-  | "Card"
-  | "Tamara"
-  | "Tabby";
-
-type DeliveryStatus =
-  | "Not Scheduled"
-  | "Scheduled"
-  | "Preparing"
-  | "Out for Delivery"
-  | "Delivered"
-  | "Delivery Failed"
-  | "Rescheduled"
-  | "Cancelled";
-
+import { Spinner } from "@/components/ui/spinner";
+import { getOrder, updateOrder, type AdminOrder, type AdminOrderStatus as OrderStatus, type AdminDeliveryStatus as DeliveryStatus, type AdminPaymentStatus as PaymentStatus } from "@/lib/api/orders";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 const orderSteps: OrderStatus[] = [
   "Pending",
@@ -66,31 +38,21 @@ const orderSteps: OrderStatus[] = [
 
 export default function OrderDetailsPage() {
   const router = useRouter();
-  const params = useParams();
-
-  const orderId = Number(params.id);
-
-  const order = useMemo(
-    () =>
-      adminOrders.find(
-        (item) =>
-          item.id === orderId
-      ),
-    [orderId]
-  );
+  const params = useParams<{ id: string }>();
+  const orderId = params.id;
+  const [order, setOrder] = useState<AdminOrder | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [currentOrderStatus, setCurrentOrderStatus] =
     useState<OrderStatus>(
-      order?.orderStatus ??
-        "Pending"
+      "Pending"
     );
 
   const [
     currentDeliveryStatus,
     setCurrentDeliveryStatus,
   ] = useState<DeliveryStatus>(
-    order?.deliveryStatus ??
-      "Not Scheduled"
+    "Not Scheduled"
   );
 
   const [
@@ -107,6 +69,10 @@ export default function OrderDetailsPage() {
     errorMessage,
     setErrorMessage,
   ] = useState("");
+
+  useEffect(() => { let active = true; getOrder(orderId).then((value) => { if (!active) return; setOrder(value); setCurrentOrderStatus(value.orderStatus); setCurrentDeliveryStatus(value.deliveryStatus); }).catch((error) => active && setErrorMessage(getErrorMessage(error, "Unable to load order."))).finally(() => active && setLoading(false)); return () => { active = false; }; }, [orderId]);
+
+  if (loading) return <div className="flex min-h-[50vh] items-center justify-center"><Spinner size="lg" label="Loading order" /></div>;
 
   if (!order) {
     return (
@@ -214,22 +180,13 @@ export default function OrderDetailsPage() {
     setSuccessMessage("");
 
     try {
-      console.log(
-        "Update order status:",
-        {
-          orderId,
-          status:
-            currentOrderStatus,
-        }
-      );
-
+      const updated = await updateOrder(orderId, { orderStatus: currentOrderStatus });
+      setOrder(updated);
       setSuccessMessage(
         "Order status updated successfully."
       );
-    } catch {
-      setErrorMessage(
-        "Unable to update order status."
-      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Unable to update order status."));
     }
   };
 
@@ -239,22 +196,13 @@ export default function OrderDetailsPage() {
       setSuccessMessage("");
 
       try {
-        console.log(
-          "Update delivery status:",
-          {
-            orderId,
-            status:
-              currentDeliveryStatus,
-          }
-        );
-
+        const updated = await updateOrder(orderId, { deliveryStatus: currentDeliveryStatus });
+        setOrder(updated);
         setSuccessMessage(
           "Delivery status updated successfully."
         );
-      } catch {
-        setErrorMessage(
-          "Unable to update delivery status."
-        );
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error, "Unable to update delivery status."));
       }
     };
 
@@ -267,15 +215,8 @@ export default function OrderDetailsPage() {
       setSuccessMessage("");
 
       try {
-        console.log(
-          "Cancel order:",
-          {
-            orderId,
-            reason,
-            notes,
-          }
-        );
-
+        const updated = await updateOrder(orderId, { orderStatus: "Cancelled", cancellationReason: reason, cancellationNotes: notes });
+        setOrder(updated);
         setCurrentOrderStatus(
           "Cancelled"
         );
@@ -287,10 +228,8 @@ export default function OrderDetailsPage() {
         setSuccessMessage(
           `Order #${order.orderNumber} cancelled successfully.`
         );
-      } catch {
-        setErrorMessage(
-          "Unable to cancel order."
-        );
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error, "Unable to cancel order."));
       }
     };
 

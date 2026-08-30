@@ -11,6 +11,47 @@ enum AdminRole {
   SUPER_ADMIN
 }
 
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum InventoryAction {
+  ADD
+  REMOVE
+  SET
+  THRESHOLD
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  DELIVERED
+  CANCELLED
+}
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+  REFUNDED
+}
+enum DeliveryStatus {
+  NOT_SCHEDULED
+  SCHEDULED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  DELIVERY_FAILED
+  RESCHEDULED
+  CANCELLED
+}
+
 model AdminUser {
   id             String               @id @default(cuid())
   email          String               @unique
@@ -50,9 +91,132 @@ model Category {
   parentId    String?
   parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
   children    Category[] @relation("CategoryTree")
+  products    Product[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   @@index([parentId, sortOrder])
   @@index([isActive])
+}
+
+model Product {
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  sku              String        @unique
+  shortDescription String
+  description      String
+  regularPrice     Int
+  salePrice        Int?
+  quantity         Int           @default(0)
+  lowStockThreshold Int          @default(2)
+  material         String
+  images           String[]
+  status           ProductStatus @default(DRAFT)
+  featured         Boolean       @default(false)
+  categoryId       String
+  category         Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  stockMovements   StockMovement[]
+  orderItems       OrderItem[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([categoryId, status])
+  @@index([quantity])
+  @@index([featured])
+}
+
+model StockMovement {
+  id             String          @id @default(cuid())
+  action         InventoryAction
+  quantity       Int
+  previousValue  Int
+  resultingValue Int
+  reason         String?
+  notes          String?
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+
+  @@index([productId, createdAt])
+  @@index([action])
+}
+
+model Customer {
+  id          String         @id @default(cuid())
+  name        String
+  email       String         @unique
+  phone       String
+  status      CustomerStatus @default(ACTIVE)
+  adminNotes  String?
+  lastLoginAt DateTime?
+  addresses   CustomerAddress[]
+  orders      Order[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status])
+}
+
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  label      String
+  emirate    String
+  area       String
+  address    String
+  building   String
+  isDefault  Boolean  @default(false)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, isDefault])
+}
+
+model Order {
+  id                   String         @id @default(cuid())
+  orderNumber          String         @unique
+  subtotal             Int
+  deliveryFee          Int            @default(0)
+  total                Int
+  paymentStatus        PaymentStatus  @default(PENDING)
+  paymentMethod        String
+  orderStatus          OrderStatus    @default(PENDING)
+  deliveryStatus       DeliveryStatus @default(NOT_SCHEDULED)
+  transactionReference String?
+  paidAt               DateTime?
+  deliveryEmirate      String
+  deliveryArea         String
+  deliveryAddress      String
+  deliveryBuilding     String
+  deliveryPhone        String
+  customerNotes        String?
+  adminNotes           String?
+  cancellationReason   String?
+  cancellationNotes    String?
+  cancelledAt          DateTime?
+  customerId           String
+  customer             Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+  placedAt             DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([customerId, placedAt])
+  @@index([orderStatus, placedAt])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  name      String
+  sku       String
+  quantity  Int
+  unitPrice Int
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
 }

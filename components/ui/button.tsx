@@ -99,7 +99,7 @@ export function Button({
         />
       )}
 
-      <span>{children}</span>
+      <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">{children}</span>
     </button>
   );
 }

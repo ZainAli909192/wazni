@@ -21,10 +21,10 @@ import { AdminEmptyState } from "@/components/admin/shared/admin-empty-state";
 import { FormAlert } from "@/components/forms/form-alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Pagination } from "@/components/ui/pagination";
-
-type ProductType = "Animal" | "Accessory";
+import { Spinner } from "@/components/ui/spinner";
+import { getInventory, updateInventory, type InventoryItem } from "@/lib/api/inventory";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 type StockAction =
   | "add"
@@ -32,115 +32,12 @@ type StockAction =
   | "set"
   | "threshold";
 
-type InventoryItem = {
-  id: number;
-  name: string;
-  sku: string;
-  type: ProductType;
-  category: string;
-  quantity: number;
-  lowStockThreshold: number;
-  updatedAt: string;
-};
-
-const initialInventoryItems: InventoryItem[] = [
-  {
-    id: 1,
-    name: "White Chinchilla",
-    sku: "RC-ANI-000001",
-    type: "Animal",
-    category: "Chinchillas",
-    quantity: 8,
-    lowStockThreshold: 2,
-    updatedAt: "24 Aug 2026 10:30 AM",
-  },
-  {
-    id: 2,
-    name: "Grey Chinchilla",
-    sku: "RC-ANI-000002",
-    type: "Animal",
-    category: "Chinchillas",
-    quantity: 2,
-    lowStockThreshold: 2,
-    updatedAt: "24 Aug 2026 09:15 AM",
-  },
-  {
-    id: 3,
-    name: "American Guinea Pig",
-    sku: "RC-ANI-000003",
-    type: "Animal",
-    category: "Guinea Pigs",
-    quantity: 6,
-    lowStockThreshold: 2,
-    updatedAt: "23 Aug 2026 04:45 PM",
-  },
-  {
-    id: 4,
-    name: "Micro Squirrel",
-    sku: "RC-ANI-000004",
-    type: "Animal",
-    category: "Micro Squirrels",
-    quantity: 0,
-    lowStockThreshold: 2,
-    updatedAt: "22 Aug 2026 11:20 AM",
-  },
-  {
-    id: 5,
-    name: "Premium Chinchilla Cage",
-    sku: "RC-ACC-000005",
-    type: "Accessory",
-    category: "Housing & Cages",
-    quantity: 12,
-    lowStockThreshold: 3,
-    updatedAt: "24 Aug 2026 08:50 AM",
-  },
-  {
-    id: 6,
-    name: "Wooden Hideout",
-    sku: "RC-ACC-000006",
-    type: "Accessory",
-    category: "Housing & Cages",
-    quantity: 3,
-    lowStockThreshold: 3,
-    updatedAt: "24 Aug 2026 08:20 AM",
-  },
-  {
-    id: 7,
-    name: "Premium Animal Bedding",
-    sku: "RC-ACC-000007",
-    type: "Accessory",
-    category: "Bedding",
-    quantity: 15,
-    lowStockThreshold: 4,
-    updatedAt: "21 Aug 2026 02:10 PM",
-  },
-  {
-    id: 8,
-    name: "Water Bottle",
-    sku: "RC-ACC-000008",
-    type: "Accessory",
-    category: "Water Bottles",
-    quantity: 1,
-    lowStockThreshold: 3,
-    updatedAt: "24 Aug 2026 07:55 AM",
-  },
-  {
-    id: 9,
-    name: "Nutrition Mix",
-    sku: "RC-ACC-000009",
-    type: "Accessory",
-    category: "Food & Nutrition",
-    quantity: 10,
-    lowStockThreshold: 3,
-    updatedAt: "23 Aug 2026 03:15 PM",
-  },
-];
-
 const pageSize = 6;
 
 export default function InventoryPage() {
-  const [inventoryItems, setInventoryItems] =
-    useState(initialInventoryItems);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -152,7 +49,7 @@ export default function InventoryPage() {
     useState(1);
 
   const [selectedIds, setSelectedIds] =
-    useState<number[]>([]);
+    useState<string[]>([]);
 
   const [bulkAction, setBulkAction] =
     useState<StockAction | "">("");
@@ -302,19 +199,15 @@ export default function InventoryPage() {
     ).length;
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    search,
-    type,
-    category,
-    stockStatus,
-  ]);
+    let active = true;
+    getInventory()
+      .then((items) => { if (active) setInventoryItems(items); })
+      .catch((error) => { if (active) setPageError(getErrorMessage(error, "Unable to load inventory.")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  useEffect(() => {
-    setCategory("all");
-  }, [type]);
-
-  const toggleItem = (id: number) => {
+  const toggleItem = (id: string) => {
     setSelectedIds((current) =>
       current.includes(id)
         ? current.filter(
@@ -472,51 +365,6 @@ export default function InventoryPage() {
     try {
       setUpdating(true);
 
-      setInventoryItems((current) =>
-        current.map((item) => {
-          if (!ids.includes(item.id)) {
-            return item;
-          }
-
-          if (
-            dialogAction === "threshold"
-          ) {
-            return {
-              ...item,
-              lowStockThreshold: value,
-              updatedAt: "Just now",
-            };
-          }
-
-          let nextQuantity =
-            item.quantity;
-
-          if (dialogAction === "add") {
-            nextQuantity =
-              item.quantity + value;
-          }
-
-          if (
-            dialogAction === "remove"
-          ) {
-            nextQuantity = Math.max(
-              0,
-              item.quantity - value
-            );
-          }
-
-          if (dialogAction === "set") {
-            nextQuantity = value;
-          }
-
-          return {
-            ...item,
-            quantity: nextQuantity,
-            updatedAt: "Just now",
-          };
-        })
-      );
-
       const payload = {
         ids,
         action: dialogAction,
@@ -525,26 +373,17 @@ export default function InventoryPage() {
         notes,
       };
 
-      console.log(
-        "Update inventory:",
-        payload
-      );
-
-      setSuccessMessage(
-        selectedProduct
-          ? `${selectedProduct.name} stock updated successfully.`
-          : `${ids.length} products updated successfully.`
-      );
+      const result = await updateInventory(payload);
+      setInventoryItems((current) => current.map((item) => result.items.find((updated) => updated.id === item.id) ?? item));
+      setSuccessMessage(result.message);
 
       setSelectedIds([]);
       setBulkAction("");
       setSelectedProduct(null);
       setDialogOpen(false);
       resetDialog();
-    } catch {
-      setDialogError(
-        "Unable to update stock. Please try again."
-      );
+    } catch (error) {
+      setDialogError(getErrorMessage(error, "Unable to update stock. Please try again."));
     } finally {
       setUpdating(false);
     }
@@ -579,6 +418,10 @@ export default function InventoryPage() {
             setSuccessMessage("")
           }
         />
+      )}
+
+      {pageError && (
+        <FormAlert variant="error" message={pageError} onClose={() => setPageError("")} />
       )}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -661,11 +504,7 @@ export default function InventoryPage() {
             type="search"
             placeholder="Search by product name, SKU..."
             value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
+            onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
             leftIcon={
               <Search className="h-5 w-5" />
             }
@@ -673,33 +512,21 @@ export default function InventoryPage() {
 
           <select
             value={type}
-            onChange={(event) =>
-              setType(
-                event.target.value
-              )
-            }
+            onChange={(event) => { setType(event.target.value); setCategory("all"); setCurrentPage(1); }}
             className="h-12 rounded-lg border border-border bg-white px-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="all">
               All Types
             </option>
 
-            <option value="animal">
-              Animals
-            </option>
-
-            <option value="accessory">
-              Accessories
+            <option value="jewellery">
+              Jewellery
             </option>
           </select>
 
           <select
             value={category}
-            onChange={(event) =>
-              setCategory(
-                event.target.value
-              )
-            }
+            onChange={(event) => { setCategory(event.target.value); setCurrentPage(1); }}
             className="h-12 rounded-lg border border-border bg-white px-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="all">
@@ -720,11 +547,7 @@ export default function InventoryPage() {
 
           <select
             value={stockStatus}
-            onChange={(event) =>
-              setStockStatus(
-                event.target.value
-              )
-            }
+            onChange={(event) => { setStockStatus(event.target.value); setCurrentPage(1); }}
             className="h-12 rounded-lg border border-border bg-white px-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="all">
@@ -755,7 +578,9 @@ export default function InventoryPage() {
         </div>
       </section>
 
-      {filteredItems.length === 0 ? (
+      {loading ? (
+        <div className="flex min-h-64 items-center justify-center"><Spinner size="lg" label="Loading inventory" /></div>
+      ) : filteredItems.length === 0 ? (
         <AdminEmptyState
           type="search"
           title="No inventory items found"
@@ -959,7 +784,7 @@ export default function InventoryPage() {
                           </td>
 
                           <td className="px-5 py-4 text-sm text-muted-foreground">
-                            {item.updatedAt}
+                            {new Date(item.updatedAt).toLocaleString()}
                           </td>
 
                           <td className="px-5 py-4">
@@ -976,7 +801,7 @@ export default function InventoryPage() {
                               >
                                 <span className="flex items-center gap-2 whitespace-nowrap">
                                   <SlidersHorizontal className="h-4 w-4" />
-                                  Update Stock
+                                  Update
                                 </span>
                               </Button>
                             </div>
@@ -1149,7 +974,7 @@ export default function InventoryPage() {
 
                           <p className="mt-3 text-xs text-muted-foreground">
                             Updated:{" "}
-                            {item.updatedAt}
+                            {new Date(item.updatedAt).toLocaleString()}
                           </p>
                         </div>
                       </div>

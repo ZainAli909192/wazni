@@ -16,7 +16,6 @@ import {
   PackageCheck,
   Search,
   ShoppingBag,
-  XCircle,
 } from "lucide-react";
 
 import { AdminPageHeader } from "@/components/admin/layout/admin-page-header";
@@ -25,18 +24,20 @@ import { FormAlert } from "@/components/forms/form-alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { Spinner } from "@/components/ui/spinner";
 import { CancelOrderDialog } from "@/components/admin/orders/cancel-order-dialog";
-import {
-  adminOrders as orders,
-  type AdminOrder as Order,
-  type AdminOrderStatus as OrderStatus,
-  type AdminPaymentStatus as PaymentStatus,
-} from "@/lib/admin/jewellery-data";
+import { getOrders, updateOrder, type AdminOrder as Order, type AdminOrderStatus as OrderStatus, type AdminPaymentStatus as PaymentStatus } from "@/lib/api/orders";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 const pageSize = 6;
+const referenceToday = new Date();
+const referenceYesterday = new Date(referenceToday.getTime() - 86400000);
 
 export default function OrdersPage() {
   const router = useRouter();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [search, setSearch] = useState("");
   const [orderStatus, setOrderStatus] =
@@ -50,7 +51,7 @@ export default function OrdersPage() {
     useState(1);
 
   const [openMenuId, setOpenMenuId] =
-    useState<number | null>(null);
+    useState<string | null>(null);
 
   const [cancelOrder, setCancelOrder] =
     useState<Order | null>(null);
@@ -89,19 +90,9 @@ export default function OrdersPage() {
 
       let matchesDate = true;
 
-      if (dateFilter === "today") {
-        matchesDate =
-          order.placedAt.startsWith(
-            "24 Aug 2026"
-          );
-      }
-
-      if (dateFilter === "yesterday") {
-        matchesDate =
-          order.placedAt.startsWith(
-            "23 Aug 2026"
-          );
-      }
+      const placed = new Date(order.placedAt);
+      if (dateFilter === "today") matchesDate = placed.toDateString() === referenceToday.toDateString();
+      if (dateFilter === "yesterday") matchesDate = placed.toDateString() === referenceYesterday.toDateString();
 
       return (
         matchesSearch &&
@@ -111,6 +102,7 @@ export default function OrdersPage() {
       );
     });
   }, [
+    orders,
     search,
     orderStatus,
     paymentStatus,
@@ -127,21 +119,10 @@ export default function OrdersPage() {
       currentPage * pageSize
     );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    search,
-    orderStatus,
-    paymentStatus,
-    dateFilter,
-  ]);
+  useEffect(() => { let active = true; getOrders().then((data) => active && setOrders(data)).catch((error) => active && setErrorMessage(getErrorMessage(error, "Unable to load orders."))).finally(() => active && setLoading(false)); return () => { active = false; }; }, []);
 
   const ordersToday =
-    orders.filter((order) =>
-      order.placedAt.startsWith(
-        "24 Aug 2026"
-      )
-    ).length;
+    orders.filter((order) => new Date(order.placedAt).toDateString() === referenceToday.toDateString()).length;
 
   const pendingCount =
     orders.filter(
@@ -166,19 +147,13 @@ export default function OrdersPage() {
   notes: string
 ) => {
   if (!cancelOrder) return;
-
-  console.log("Cancel order:", {
-    id: cancelOrder.id,
-    reason,
-    notes,
-  });
-
-  setSuccessMessage(
-    `Order #${cancelOrder.orderNumber} cancelled successfully.`
-  );
-
-  setCancelOrder(null);
-  setOpenMenuId(null);
+  try {
+    const updated = await updateOrder(cancelOrder.id, { orderStatus: "Cancelled", cancellationReason: reason, cancellationNotes: notes });
+    setOrders((current) => current.map((order) => order.id === updated.id ? updated : order));
+    setSuccessMessage(`Order #${cancelOrder.orderNumber} cancelled successfully.`);
+    setCancelOrder(null);
+    setOpenMenuId(null);
+  } catch (error) { setErrorMessage(getErrorMessage(error, "Unable to cancel order.")); }
 };
 
   const resetFilters = () => {
@@ -244,6 +219,7 @@ export default function OrdersPage() {
           }
         />
       )}
+      {errorMessage && <FormAlert variant="error" message={errorMessage} onClose={() => setErrorMessage("")} />}
 
 {/* Orders Today */}
 <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -329,9 +305,7 @@ export default function OrdersPage() {
       type="search"
       placeholder="Search orders..."
       value={search}
-      onChange={(event) =>
-        setSearch(event.target.value)
-      }
+      onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
       leftIcon={
         <Search className="h-5 w-5" />
       }
@@ -341,9 +315,7 @@ export default function OrdersPage() {
     <div className="grid grid-cols-2 gap-2 xl:contents">
       <select
         value={orderStatus}
-        onChange={(event) =>
-          setOrderStatus(event.target.value)
-        }
+        onChange={(event) => { setOrderStatus(event.target.value); setCurrentPage(1); }}
         className="h-11 min-w-0 rounded-lg border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:h-12 sm:px-4"
       >
         <option value="all">
@@ -373,9 +345,7 @@ export default function OrdersPage() {
 
       <select
         value={paymentStatus}
-        onChange={(event) =>
-          setPaymentStatus(event.target.value)
-        }
+        onChange={(event) => { setPaymentStatus(event.target.value); setCurrentPage(1); }}
         className="h-11 min-w-0 rounded-lg border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:h-12 sm:px-4"
       >
         <option value="all">
@@ -404,9 +374,7 @@ export default function OrdersPage() {
 
         <select
           value={dateFilter}
-          onChange={(event) =>
-            setDateFilter(event.target.value)
-          }
+          onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
           className="h-11 w-full rounded-lg border border-border bg-white pl-9 pr-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:h-12 sm:pl-10 sm:pr-4"
         >
           <option value="all">
@@ -435,7 +403,7 @@ export default function OrdersPage() {
   </div>
 </section>
 
-      {filteredOrders.length === 0 ? (
+      {loading ? <div className="flex min-h-64 items-center justify-center"><Spinner size="lg" label="Loading orders" /></div> : filteredOrders.length === 0 ? (
         <AdminEmptyState
           type="search"
           title="No orders found"
@@ -541,7 +509,7 @@ export default function OrdersPage() {
                         </td>
 
                         <td className="px-5 py-4 text-sm text-muted-foreground">
-                          {order.placedAt}
+                          {new Date(order.placedAt).toLocaleString()}
                         </td>
 
                         <td className="relative px-5 py-4">
@@ -580,15 +548,7 @@ export default function OrdersPage() {
 
                               <button
                                 type="button"
-                                onClick={() => {
-                                  console.log(
-                                    "View customer:",
-                                    order.id
-                                  );
-                                  setOpenMenuId(
-                                    null
-                                  );
-                                }}
+                                onClick={() => { router.push(`/admin/customers/${order.customerId}`); setOpenMenuId(null); }}
                                 className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-surface-subtle"
                               >
                                 View Customer
@@ -596,15 +556,7 @@ export default function OrdersPage() {
 
                               <button
                                 type="button"
-                                onClick={() => {
-                                  console.log(
-                                    "View payment:",
-                                    order.id
-                                  );
-                                  setOpenMenuId(
-                                    null
-                                  );
-                                }}
+                                onClick={() => { router.push(`/admin/payments/${order.id}`); setOpenMenuId(null); }}
                                 className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-surface-subtle"
                               >
                                 View Payment
@@ -728,7 +680,7 @@ export default function OrdersPage() {
                     </div>
 
                     <p className="mt-3 text-xs text-muted-foreground">
-                      {order.placedAt}
+                      {new Date(order.placedAt).toLocaleString()}
                     </p>
                   </div>
 
@@ -765,15 +717,7 @@ export default function OrdersPage() {
                         <div className="absolute bottom-[48px] right-0 z-30 w-[185px] overflow-hidden rounded-xl border border-border bg-white p-1.5 shadow-lg">
                           <button
                             type="button"
-                            onClick={() => {
-                              console.log(
-                                "View customer:",
-                                order.id
-                              );
-                              setOpenMenuId(
-                                null
-                              );
-                            }}
+                            onClick={() => { router.push(`/admin/customers/${order.customerId}`); setOpenMenuId(null); }}
                             className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-subtle"
                           >
                             View Customer
@@ -781,15 +725,7 @@ export default function OrdersPage() {
 
                           <button
                             type="button"
-                            onClick={() => {
-                              console.log(
-                                "View payment:",
-                                order.id
-                              );
-                              setOpenMenuId(
-                                null
-                              );
-                            }}
+                            onClick={() => { router.push(`/admin/payments/${order.id}`); setOpenMenuId(null); }}
                             className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-subtle"
                           >
                             View Payment

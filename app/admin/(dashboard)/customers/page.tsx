@@ -20,13 +20,17 @@ import { AdminEmptyState } from "@/components/admin/shared/admin-empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { Spinner } from "@/components/ui/spinner";
+import { FormAlert } from "@/components/forms/form-alert";
+import { getCustomers } from "@/lib/api/customers";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 type CustomerStatus =
   | "Active"
   | "Inactive";
 
 type Customer = {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   phone: string;
@@ -37,7 +41,7 @@ type Customer = {
   status: CustomerStatus;
 };
 
-const customers: Customer[] = [
+const staticCustomers: Customer[] = [
   {
     id: 101,
     name: "Ahmed Daniyal",
@@ -132,6 +136,9 @@ const pageSize = 6;
 
 export default function CustomersPage() {
   const router = useRouter();
+  const [customers, setCustomers] = useState<Customer[]>(staticCustomers);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] =
@@ -181,6 +188,7 @@ export default function CustomersPage() {
       );
     });
   }, [
+    customers,
     search,
     status,
     activity,
@@ -196,13 +204,7 @@ export default function CustomersPage() {
       currentPage * pageSize
     );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    search,
-    status,
-    activity,
-  ]);
+  useEffect(() => { let active = true; getCustomers().then((data) => active && setCustomers(data as Customer[])).catch((error) => active && setErrorMessage(getErrorMessage(error, "Unable to load customers."))).finally(() => active && setLoading(false)); return () => { active = false; }; }, []);
 
   const totalCustomers =
     customers.length;
@@ -220,12 +222,7 @@ export default function CustomersPage() {
     ).length;
 
   const newCustomers =
-    customers.filter(
-      (customer) =>
-        customer.memberSince.includes(
-          "Aug 2026"
-        )
-    ).length;
+    customers.filter((customer) => { const joined = new Date(customer.memberSince); const now = new Date(); return joined.getMonth() === now.getMonth() && joined.getFullYear() === now.getFullYear(); }).length;
 
   const resetFilters = () => {
     setSearch("");
@@ -239,6 +236,7 @@ export default function CustomersPage() {
         title="Customers"
         description="Manage customer accounts and order activity."
       />
+      {errorMessage && <FormAlert variant="error" message={errorMessage} onClose={() => setErrorMessage("")} />}
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm sm:p-5">
@@ -320,11 +318,7 @@ export default function CustomersPage() {
             type="search"
             placeholder="Search customers..."
             value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
+            onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
             leftIcon={
               <Search className="h-5 w-5" />
             }
@@ -334,11 +328,7 @@ export default function CustomersPage() {
           <div className="grid grid-cols-2 gap-2 xl:contents">
             <select
               value={status}
-              onChange={(event) =>
-                setStatus(
-                  event.target.value
-                )
-              }
+              onChange={(event) => { setStatus(event.target.value); setCurrentPage(1); }}
               className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:h-12"
             >
               <option value="all">
@@ -356,11 +346,7 @@ export default function CustomersPage() {
 
             <select
               value={activity}
-              onChange={(event) =>
-                setActivity(
-                  event.target.value
-                )
-              }
+              onChange={(event) => { setActivity(event.target.value); setCurrentPage(1); }}
               className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:h-12"
             >
               <option value="all">
@@ -388,7 +374,7 @@ export default function CustomersPage() {
         </div>
       </section>
 
-      {filteredCustomers.length === 0 ? (
+      {loading ? <div className="flex min-h-64 items-center justify-center"><Spinner size="lg" label="Loading customers" /></div> : filteredCustomers.length === 0 ? (
         <AdminEmptyState
           type="search"
           title="No customers found"
@@ -468,7 +454,7 @@ export default function CustomersPage() {
                         </td>
 
                         <td className="px-5 py-4 text-sm text-muted-foreground">
-                          {customer.lastOrder}
+                          {customer.lastOrder === "—" ? "—" : new Date(customer.lastOrder).toLocaleDateString()}
                         </td>
 
                         <td className="px-5 py-4">
@@ -581,7 +567,7 @@ export default function CustomersPage() {
                       </span>
 
                       <span className="font-medium">
-                        {customer.lastOrder}
+                        {customer.lastOrder === "—" ? "—" : new Date(customer.lastOrder).toLocaleDateString()}
                       </span>
                     </div>
                   </div>

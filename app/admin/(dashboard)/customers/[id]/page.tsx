@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -27,6 +27,9 @@ import { AdminPageHeader } from "@/components/admin/layout/admin-page-header";
 import { FormAlert } from "@/components/forms/form-alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { getCustomer, updateCustomer } from "@/lib/api/customers";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 type CustomerStatus = "Active" | "Inactive";
 
@@ -57,7 +60,7 @@ type RefundStatus =
   | "Declined";
 
 type CustomerOrder = {
-  id: number;
+  id: string | number;
   orderNumber: string;
   date: string;
   total: number;
@@ -84,7 +87,7 @@ type Refund = {
 };
 
 type Address = {
-  id: number;
+  id: string | number;
   label: string;
   emirate: string;
   area: string;
@@ -94,7 +97,7 @@ type Address = {
 };
 
 type Customer = {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   phone: string;
@@ -117,7 +120,7 @@ type Customer = {
   adminNotes: string;
 };
 
-const customers: Customer[] = [
+const staticCustomers: Customer[] = [
   {
     id: 101,
     name: "Ahmed Daniyal",
@@ -222,29 +225,23 @@ const customers: Customer[] = [
       "Customer prefers evening delivery. Call before dispatch.",
   },
 ];
+void staticCustomers;
 
 export default function CustomerDetailsPage() {
   const router = useRouter();
-  const params = useParams();
-
-  const customerId = Number(params.id);
-
-  const customer = useMemo(
-    () =>
-      customers.find(
-        (item) => item.id === customerId
-      ),
-    [customerId]
-  );
+  const params = useParams<{ id: string }>();
+  const customerId = params.id;
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [accountStatus, setAccountStatus] =
     useState<CustomerStatus>(
-      customer?.status ?? "Active"
+      "Active"
     );
 
   const [adminNotes, setAdminNotes] =
     useState(
-      customer?.adminNotes ?? ""
+      ""
     );
 
   const [successMessage, setSuccessMessage] =
@@ -252,6 +249,10 @@ export default function CustomerDetailsPage() {
 
   const [errorMessage, setErrorMessage] =
     useState("");
+
+  useEffect(() => { let active = true; getCustomer(customerId).then((value) => { if (!active) return; const loaded = value as unknown as Customer; setCustomer(loaded); setAccountStatus(loaded.status); setAdminNotes(loaded.adminNotes); }).catch((error) => active && setErrorMessage(getErrorMessage(error, "Unable to load customer."))).finally(() => active && setLoading(false)); return () => { active = false; }; }, [customerId]);
+
+  if (loading) return <div className="flex min-h-[50vh] items-center justify-center"><Spinner size="lg" label="Loading customer" /></div>;
 
   if (!customer) {
     return (
@@ -407,21 +408,13 @@ export default function CustomerDetailsPage() {
     setErrorMessage("");
 
     try {
-      console.log(
-        "Save customer notes:",
-        {
-          customerId,
-          adminNotes,
-        }
-      );
-
+      const updated = await updateCustomer(customerId, { adminNotes });
+      setCustomer(updated as unknown as Customer);
       setSuccessMessage(
         "Customer notes saved successfully."
       );
-    } catch {
-      setErrorMessage(
-        "Unable to save customer notes."
-      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Unable to save customer notes."));
     }
   };
 
@@ -436,17 +429,9 @@ export default function CustomerDetailsPage() {
             ? "Inactive"
             : "Active";
 
-        console.log(
-          "Update customer status:",
-          {
-            customerId,
-            status: nextStatus,
-          }
-        );
-
-        setAccountStatus(
-          nextStatus
-        );
+        const updated = await updateCustomer(customerId, { status: nextStatus });
+        setCustomer(updated as unknown as Customer);
+        setAccountStatus(nextStatus);
 
         setSuccessMessage(
           `Customer account ${
@@ -456,10 +441,8 @@ export default function CustomerDetailsPage() {
               : "deactivated"
           } successfully.`
         );
-      } catch {
-        setErrorMessage(
-          "Unable to update customer status."
-        );
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error, "Unable to update customer status."));
       }
     };
 
