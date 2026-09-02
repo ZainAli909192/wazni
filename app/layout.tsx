@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          <ConnectMenu />
+          {/* <ConnectMenu /> */}
           <CartProvider>
             <SiteChrome>{children}</SiteChrome>
           </CartProvider>

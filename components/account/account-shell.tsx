@@ -90,38 +90,22 @@ async function handleLogout() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FCFAF6] text-[#071426]">
+    <main className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip bg-[#FCFAF6] text-[#071426]">
       {/* HERO */}
 
-      <section className="bg-[#071426]">
-        <div className="mx-auto max-w-[1500px] px-5 py-11 text-center sm:px-6 lg:px-10 lg:py-14">
-          <div className="flex items-center justify-center gap-3">
-            <span className="h-px w-8 bg-[#C7A05A]" />
-
-            <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#C7A05A]">
-              {eyebrow}
-            </p>
-
-            <span className="h-px w-8 bg-[#C7A05A]" />
-          </div>
-
-          <h1 className="mt-4 font-serif text-[38px] text-white sm:text-[46px] lg:text-[52px]">
-            {title}
-          </h1>
-        </div>
-      </section>
+      
 
       {/* MAIN */}
 
-      <section className="mx-auto max-w-[1500px] px-4 py-7 sm:px-6 lg:px-10 lg:py-12">
-        <div className="grid gap-7 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-10">
+      <section className="mx-auto w-full min-w-0 max-w-[1500px] px-4 py-7 sm:px-6 lg:px-10 lg:py-12">
+        <div className="grid min-w-0 gap-7 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-10">
           {/* SIDEBAR */}
 
-          <aside className="self-start lg:sticky lg:top-8">
-            <div className="overflow-hidden border border-[#C7A05A]/20 bg-white">
+          <aside className="min-w-0 max-w-full self-start lg:sticky lg:top-8">
+            <div className="max-w-full overflow-hidden border border-[#C7A05A]/20 bg-white">
               {/* MOBILE */}
 
-              <div className="flex overflow-x-auto border-b border-[#071426]/10 lg:hidden">
+              <div className="grid w-full min-w-0 grid-cols-4 overflow-hidden border-b border-[#071426]/10 lg:hidden">
                 {navigation.map(
                   ({
                     label,
@@ -135,7 +119,8 @@ async function handleLogout() {
                       <Link
                         key={href}
                         href={href}
-                        className={`flex min-w-[110px] flex-1 items-center justify-center gap-2 border-r border-[#071426]/8 px-4 py-4 !text-[9px] font-semibold uppercase tracking-[0.08em] !no-underline last:border-r-0 ${
+                        aria-current={active ? "page" : undefined}
+                        className={`flex min-w-0 flex-col items-center justify-center gap-1.5 border-r border-[#071426]/8 px-1 py-3.5 !text-[8px] font-semibold uppercase tracking-[0.02em] !no-underline last:border-r-0 sm:flex-row sm:gap-2 sm:px-2 sm:text-[9px] sm:tracking-[0.06em] ${
                           active
                             ? "!text-[#B88734]"
                             : "!text-[#071426]/55"
@@ -211,7 +196,7 @@ async function handleLogout() {
             </div>
           </aside>
 
-          <div>{children}</div>
+          <div className="min-w-0 max-w-full overflow-x-clip">{children}</div>
         </div>
       </section>
     </main>

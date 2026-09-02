@@ -639,16 +639,10 @@ export default function Header() {
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed bottom-0 left-0 right-0 z-[110] overflow-visible lg:hidden"
+        className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-[110] max-w-[calc(100vw-24px)] overflow-visible lg:hidden"
       >
         <div
-          className="relative grid grid-cols-5 items-end overflow-visible border-t border-[var(--wazni-gold)]/20 bg-[var(--wazni-navy)] px-2 shadow-[0_-10px_35px_rgba(7,20,38,0.20)]"
-          style={{
-            height:
-              "calc(78px + env(safe-area-inset-bottom))",
-            paddingBottom:
-              "max(10px, env(safe-area-inset-bottom))",
-          }}
+          className="relative grid h-[72px] w-full min-w-0 grid-cols-5 items-end overflow-visible rounded-[22px] border border-[var(--wazni-gold)]/25 bg-[var(--wazni-navy)] px-1 pb-2 shadow-[0_14px_38px_rgba(7,20,38,0.28)]"
         >
           <MobileBottomItem
             href="/"
@@ -919,7 +913,8 @@ function MobileBottomItem({
   return (
     <Link
       href={href}
-      className="relative flex h-[68px] min-w-0 flex-col items-center justify-end gap-[7px] pb-[3px] !no-underline"
+      aria-current={active ? "page" : undefined}
+      className="relative flex h-[64px] min-w-0 touch-manipulation flex-col items-center justify-end gap-[6px] pb-[2px] !no-underline"
     >
       {active ? (
         <motion.span
@@ -929,9 +924,9 @@ function MobileBottomItem({
             stiffness: 420,
             damping: 32,
           }}
-          className="absolute -top-[28px] left-1/2 flex h-[64px] w-[64px] -translate-x-1/2 items-center justify-center rounded-full border-[4px] border-white/90 bg-[var(--wazni-ivory)] shadow-[0_8px_22px_rgba(0,0,0,0.20)]"
+          className="absolute -top-[20px] left-1/2 flex h-[56px] w-[56px] -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-white/90 bg-[var(--wazni-ivory)] shadow-[0_7px_18px_rgba(0,0,0,0.18)]"
         >
-          <span className="relative flex items-center justify-center !text-[var(--wazni-gold-dark)] [&>svg]:h-[27px] [&>svg]:w-[27px] [&>svg]:stroke-[2]">
+          <span className="relative flex items-center justify-center !text-[var(--wazni-gold-dark)] [&>svg]:h-[24px] [&>svg]:w-[24px] [&>svg]:stroke-[1.9]">
             {icon}
 
             {badge !== undefined &&
@@ -988,7 +983,7 @@ function MobileMoreButton({
       onClick={onClick}
       aria-label="More options"
       aria-expanded={active}
-      className="relative flex h-[68px] min-w-0 flex-col items-center justify-end gap-[7px] pb-[3px]"
+      className="relative flex h-[64px] min-w-0 touch-manipulation flex-col items-center justify-end gap-[6px] pb-[2px]"
     >
       {active ? (
         <motion.span
@@ -998,11 +993,11 @@ function MobileMoreButton({
             stiffness: 420,
             damping: 32,
           }}
-          className="absolute -top-[28px] left-1/2 flex h-[64px] w-[64px] -translate-x-1/2 items-center justify-center rounded-full border-[4px] border-white/90 bg-[var(--wazni-ivory)] shadow-[0_8px_22px_rgba(0,0,0,0.20)]"
+          className="absolute -top-[20px] left-1/2 flex h-[56px] w-[56px] -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-white/90 bg-[var(--wazni-ivory)] shadow-[0_7px_18px_rgba(0,0,0,0.18)]"
         >
           <MoreHorizontal
-            size={28}
-            strokeWidth={2}
+            size={24}
+            strokeWidth={1.9}
             className="text-[var(--wazni-gold-dark)]"
           />
         </motion.span>

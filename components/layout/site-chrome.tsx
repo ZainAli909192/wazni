@@ -15,8 +15,10 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
   return (
     <>
       <Header />
-      <div className="min-h-screen">{children}</div>
-      <Footer />
+      <div className="min-w-0 max-w-full overflow-x-clip pb-[calc(92px+env(safe-area-inset-bottom))] lg:pb-0">
+        <div className="min-h-screen min-w-0 max-w-full">{children}</div>
+        <Footer />
+      </div>
     </>
   );
 }

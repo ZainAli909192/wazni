@@ -141,7 +141,7 @@ export function ConnectMenu() {
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-[calc(1.1rem+env(safe-area-inset-bottom))] right-4 z-[75] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6"
+      className="fixed bottom-[calc(94px+env(safe-area-inset-bottom))] right-4 z-[75] flex max-w-[calc(100vw-2rem)] flex-col items-end gap-3 lg:bottom-6 lg:right-6"
     >
       <AnimatePresence>
         {open && (
