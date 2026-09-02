@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  ...(process.platform === "win32"
+    ? {
+        experimental: {
+          cpus: 1,
+          workerThreads: false,
+          webpackBuildWorker: false,
+          parallelServerCompiles: false,
+          parallelServerBuildTraces: false,
+        },
+      }
+    : {}),
 };
 
 export default nextConfig;
