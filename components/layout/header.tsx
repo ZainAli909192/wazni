@@ -774,48 +774,7 @@ export default function Header() {
 
               <div className="max-h-[calc(82dvh-94px)] overflow-y-auto pb-[calc(95px+env(safe-area-inset-bottom))]">
                 <nav className="px-5 py-3">
-                  {menuItems.map(
-                    (
-                      item,
-                      index
-                    ) => (
-                      <motion.div
-                        key={
-                          item.label
-                        }
-                        initial={{
-                          opacity: 0,
-                          y: 10,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                        }}
-                        transition={{
-                          delay:
-                            reduceMotion
-                              ? 0
-                              : 0.04 +
-                                index *
-                                  0.035,
-                        }}
-                      >
-                        <MoreMenuLink
-                          href={
-                            item.href
-                          }
-                          label={
-                            item.label
-                          }
-                          onClick={() =>
-                            setMenuOpen(
-                              false
-                            )
-                          }
-                        />
-                      </motion.div>
-                    )
-                  )}
+                
 
                   <MoreMenuLink
                     href="/about"
