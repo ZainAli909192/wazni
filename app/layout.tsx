@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 import SiteChrome from "@/components/layout/site-chrome";
+import SitePreloader from "@/components/layout/site-preloader";
 import { CartProvider } from "@/components/shop/cart-provider";
 
 import Providers from "./providers";
-import {ConnectMenu }from "@/components/layout/connect-menu"; 
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,9 +21,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          {/* <ConnectMenu /> */}
           <CartProvider>
-            <SiteChrome>{children}</SiteChrome>
+            <SitePreloader />
+
+            <SiteChrome>
+              {children}
+            </SiteChrome>
           </CartProvider>
         </Providers>
       </body>
